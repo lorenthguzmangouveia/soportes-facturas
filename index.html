@@ -1,0 +1,847 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Soportes de facturas</title>
+<style>
+:root{--bg:#f4f6f9;--card:#fff;--ink:#1c2434;--mute:#667085;--line:#dfe3ea;--brand:#17407a;--brand2:#e8eef8;--ok:#0f7a3d;--okbg:#e4f4ea;--warn:#8a5a00;--warnbg:#fff3d1;--bad:#a4262c;--badbg:#fde8e8;--info:#1d5fa8;--infobg:#e6f0fb}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--ink);font:14px/1.45 -apple-system,"Segoe UI",Roboto,Arial,sans-serif}
+.wrap{max-width:1380px;margin:0 auto;padding:0 20px}
+header{background:var(--card);border-bottom:1px solid var(--line)}
+.hdr{display:flex;justify-content:space-between;align-items:center;gap:16px;padding-top:14px;padding-bottom:10px;flex-wrap:wrap}
+h1{margin:0;font-size:20px;color:var(--brand)}
+.sub{margin:2px 0 0;color:var(--mute);font-size:12.5px}
+.folderbox{display:flex;align-items:center;gap:10px;font-size:13px}
+.folderbox .name{font-weight:600}
+.pill{display:inline-block;padding:2px 9px;border-radius:99px;font-size:12px;font-weight:600}
+.pill.ok{background:var(--okbg);color:var(--ok)}.pill.off{background:var(--badbg);color:var(--bad)}.pill.wait{background:var(--warnbg);color:var(--warn)}
+.tabs{display:flex;gap:4px}
+.tabs button{border:0;background:none;padding:10px 16px;font-size:14px;color:var(--mute);cursor:pointer;border-bottom:3px solid transparent;font-weight:600}
+.tabs button.on{color:var(--brand);border-bottom-color:var(--brand)}
+main{padding-top:18px;padding-bottom:40px}
+.card{background:var(--card);border:1px solid var(--line);border-radius:10px;padding:16px;margin-bottom:16px}
+.card h2{margin:0 0 10px;font-size:15px}
+.card h3{margin:14px 0 6px;font-size:13.5px}
+button.btn,label.btn{display:inline-block;border:1px solid var(--brand);background:var(--brand);color:#fff;border-radius:7px;padding:7px 14px;font-size:13px;font-weight:600;cursor:pointer}
+button.btn.sec,label.btn.sec{background:#fff;color:var(--brand)}
+button.btn:disabled{opacity:.45;cursor:not-allowed}
+button.lnk{background:none;border:0;color:var(--info);cursor:pointer;padding:0;font-size:13px;text-decoration:underline}
+.drop{border:2px dashed #aab6c8;border-radius:10px;padding:26px;text-align:center;color:var(--mute);background:#fafbfd;cursor:pointer}
+.drop.over{background:var(--brand2);border-color:var(--brand)}
+.drop b{color:var(--ink)}
+.row{display:flex;gap:10px;align-items:center;flex-wrap:wrap}
+.grid2{display:grid;grid-template-columns:minmax(0,1fr) 340px;gap:16px;align-items:start}
+#itemsTbl{min-width:1060px}#itemsTbl th:nth-child(2){min-width:200px}#itemsTbl th:nth-child(3){min-width:180px}#itemsTbl th:nth-child(4){min-width:120px}#itemsTbl th:nth-child(5){min-width:115px}#itemsTbl th:nth-child(7){min-width:230px}#itemsTbl th:nth-child(8){min-width:210px}
+@media(max-width:1100px){.grid2{grid-template-columns:1fr}}
+table{border-collapse:collapse;width:100%}
+th,td{padding:6px 8px;border-bottom:1px solid var(--line);text-align:left;vertical-align:top;font-size:13px}
+th{background:#f0f3f8;font-size:12px;color:#44506a;position:sticky;top:0;white-space:nowrap}
+td.num,th.num{text-align:right;font-variant-numeric:tabular-nums;white-space:nowrap}
+.tblwrap{overflow:auto;max-height:560px;border:1px solid var(--line);border-radius:8px}
+input[type=text],input:not([type]),select{width:100%;padding:5px 7px;border:1px solid #c9d0dc;border-radius:6px;font-size:13px;background:#fff}
+input.amt{text-align:right;width:105px}input.dt{width:105px}
+input.invalid{border-color:var(--bad);background:var(--badbg)}
+.fn a{color:var(--info);font-weight:600;text-decoration:none;word-break:break-all}
+.src{font-size:11.5px;color:var(--mute)}
+.note{font-size:11.5px;color:var(--warn)}
+.badge{display:inline-block;padding:1px 8px;border-radius:99px;font-size:11.5px;font-weight:700}
+.badge.alta,.badge.CONCILIADO{background:var(--okbg);color:var(--ok)}
+.badge.media,.badge.FECHA_FUERA,.badge.VENDOR_DIF,.badge.MONTO_DIF{background:var(--warnbg);color:var(--warn)}
+.badge.baja,.badge.PENDIENTE,.badge.SIN_TXN{background:var(--badbg);color:var(--bad)}
+.badge.YA{background:var(--infobg);color:var(--info)}
+tr.sel td{background:#f3f7fd}
+tr.st-guardado td{background:#f1faf4}tr.st-duplicado td,tr.st-error td{background:#fff6f6}
+.final{font-family:Consolas,monospace;font-size:12px;word-break:break-all;color:#2b3a55}
+.empty{text-align:center;color:var(--mute);padding:22px}
+#preview{position:sticky;top:10px}
+#preview canvas,#preview img{max-width:100%;border:1px solid var(--line);border-radius:6px}
+.cards{display:grid;grid-template-columns:repeat(auto-fit,minmax(170px,1fr));gap:10px;margin:10px 0}
+.kpi{border:1px solid var(--line);border-radius:9px;padding:10px;background:#fff}
+.kpi .n{font-size:22px;font-weight:700}.kpi .t{font-size:12px;color:var(--mute)}.kpi .m{font-size:12.5px;font-variant-numeric:tabular-nums}
+.kpi.ok{border-left:4px solid var(--ok)}.kpi.warn{border-left:4px solid #d9a000}.kpi.bad{border-left:4px solid var(--bad)}.kpi.info{border-left:4px solid var(--info)}
+.alert{padding:9px 12px;border-radius:8px;margin:8px 0;font-size:13px}
+.alert.err{background:var(--badbg);color:var(--bad)}.alert.warn{background:var(--warnbg);color:var(--warn)}.alert.ok{background:var(--okbg);color:var(--ok)}.alert.info{background:var(--infobg);color:var(--info)}
+.sub-tabs{display:flex;gap:6px;flex-wrap:wrap;margin:12px 0 8px}
+.sub-tabs button{border:1px solid var(--line);background:#fff;border-radius:99px;padding:4px 12px;font-size:12.5px;cursor:pointer}
+.sub-tabs button.on{background:var(--brand);color:#fff;border-color:var(--brand)}
+.map{display:grid;grid-template-columns:repeat(auto-fit,minmax(190px,1fr));gap:8px}
+.map label{font-size:12px;color:var(--mute);display:block}
+.types label{display:inline-block;margin:2px 12px 2px 0;font-size:13px}
+#log{font:12px/1.5 Consolas,monospace;max-height:170px;overflow:auto;background:#101828;color:#d0d5dd;padding:10px;border-radius:8px}
+#log .e{color:#ff9b9b}#log .w{color:#ffd479}#log .o{color:#7fe3a1}
+.help h3{color:var(--brand)}.help ul,.help ol{margin:4px 0 8px 20px;padding:0}.help code{background:#eef1f6;padding:1px 5px;border-radius:4px}
+small.mute{color:var(--mute)}
+[hidden]{display:none!important}
+</style>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+<script src="https://accounts.google.com/gsi/client" async defer></script>
+</head>
+<body>
+<header>
+  <div class="wrap hdr">
+    <div>
+      <h1>Soportes de facturas</h1>
+      <p class="sub">Procesar soportes, renombrar, guardar en Google Drive y conciliar contra QBO · Los documentos se leen en tu navegador y solo se guardan en tu Drive</p>
+    </div>
+    <div class="folderbox" id="folderBox"></div>
+  </div>
+  <div class="wrap"><nav class="tabs" id="tabs">
+    <button data-tab="proc" class="on">1. Procesar soportes</button>
+    <button data-tab="conc">2. Conciliar con QBO</button>
+    <button data-tab="vend">Vendors</button>
+    <button data-tab="help">Instrucciones y autoprueba</button>
+  </nav></div>
+</header>
+<div class="wrap"><details class="card" id="gset" style="margin-top:12px"><summary><b>Conexión con Google</b> <small class="mute">(configuración una sola vez y diagnóstico)</small></summary>
+<div class="map" style="margin-top:10px">
+<div><label>Client ID de Google (OAuth)</label><input type="text" id="cfgClient" placeholder="xxxxxxxx.apps.googleusercontent.com"></div>
+<div><label>Carpeta raíz en Drive</label><input type="text" id="cfgRoot" placeholder="Soportes_Facturas"></div>
+<div><label>Operador (quién usa la herramienta hoy)</label><input type="text" id="cfgOp" placeholder="Nombre o iniciales"></div>
+<div><label><input type="checkbox" id="cfgFull"> Acceso completo a Drive (usar solo si «Probar conexión» indica que no ves archivos de la otra persona)</label></div></div>
+<div class="row" style="margin-top:10px"><button class="btn sec" id="gDiag">Probar conexión</button><small class="mute">Crea y borra una carpeta y un archivo de prueba para validar permisos.</small></div>
+<pre id="diagOut" style="font:12px/1.5 Consolas,monospace;white-space:pre-wrap;margin:8px 0 0"></pre></details></div>
+
+<main class="wrap">
+<div id="libAlert"></div>
+
+<!-- ============ TAB 1 ============ -->
+<section id="tab-proc">
+  <div class="card">
+    <h2>Cargar soportes</h2>
+    <div class="drop" id="drop">
+      <b>Arrastra aquí</b> PDF, imágenes o correos <b>.eml</b> (Gmail → ⋮ → «Descargar mensaje») — o <u>haz clic para elegirlos</u>
+      <input type="file" id="fileIn" multiple accept=".pdf,.png,.jpg,.jpeg,.webp,.gif,.eml" hidden>
+      <div id="procStatus" class="src" style="margin-top:6px"></div>
+    </div>
+  </div>
+  <div class="grid2">
+    <div class="card" style="padding:0">
+      <div class="row" style="padding:12px 14px">
+        <button class="btn" id="btnSave" disabled>Guardar seleccionados en «En proceso»</button>
+        <button class="btn sec" id="btnSelOk">Seleccionar los válidos de certeza alta</button>
+        <button class="btn sec" id="btnClean">Quitar guardados de la lista</button>
+        <span class="src" id="counters"></span>
+      </div>
+      <div class="tblwrap" style="border:0;border-top:1px solid var(--line);border-radius:0">
+        <table id="itemsTbl">
+          <thead><tr><th></th><th>Archivo / origen</th><th>Vendor</th><th>Fecha (MM/DD/AAAA)</th><th class="num">Monto USD</th><th>Certeza</th><th>Nombre final</th><th>Estado</th></tr></thead>
+          <tbody id="itemsBody"></tbody>
+        </table>
+      </div>
+    </div>
+    <div class="card" id="preview"><h2>Vista previa</h2><div id="pvBody" class="src">Haz clic en el nombre de un archivo para verlo aquí.</div></div>
+  </div>
+  <datalist id="dlVendors"></datalist>
+</section>
+
+<!-- ============ TAB 2 ============ -->
+<section id="tab-conc" hidden>
+  <div class="card">
+    <h2>Paso 1 · Soportes disponibles en el Drive</h2>
+    <div id="concSupports" class="src">Conecta la carpeta de resguardo para ver los soportes.</div>
+    <div class="row" style="margin-top:8px"><button class="btn sec" id="btnRescan">Releer carpeta</button></div>
+  </div>
+  <div class="card">
+    <h2>Paso 2 · Excel de Bills y Expenses de QBO</h2>
+    <div class="row">
+      <label class="btn sec" for="xlsIn">Elegir Excel / CSV de QBO</label>
+      <input type="file" id="xlsIn" accept=".xlsx,.xls,.csv" hidden>
+      <span id="xlsName" class="src"></span>
+    </div>
+    <div id="xlsPanel"></div>
+  </div>
+  <div id="resultPanel"></div>
+</section>
+
+<!-- ============ TAB VENDORS ============ -->
+<section id="tab-vend" hidden>
+  <div class="card">
+    <h2>Tabla de vendors y alias</h2>
+    <p class="src">El <b>nombre principal</b> debe ser igual al de QBO (es el que se usa en el nombre del archivo y en la conciliación). Los <b>alias</b> son las variantes que aparecen impresas en las facturas (separadas por coma). Se aprende sola: al guardar un soporte con un vendor nuevo, se agrega aquí.</p>
+    <div class="row" style="margin-bottom:8px">
+      <button class="btn sec" id="vAdd">+ Agregar vendor</button>
+      <button class="btn sec" id="vPasteBtn">Pegar lista de vendors de QBO</button>
+      <button class="btn sec" id="vExport">Exportar JSON</button>
+      <label class="btn sec" for="vImport">Importar JSON</label><input type="file" id="vImport" accept=".json" hidden>
+    </div>
+    <div id="vPasteBox" hidden style="margin-bottom:10px">
+      <textarea id="vPaste" rows="6" style="width:100%" placeholder="Un vendor por línea (copia la columna Vendor desde QBO)"></textarea>
+      <button class="btn" id="vPasteOk">Agregar los que no existan</button>
+    </div>
+    <div class="tblwrap"><table><thead><tr><th style="width:36%">Nombre principal (como en QBO)</th><th>Alias impresos en facturas (coma)</th><th></th></tr></thead><tbody id="vBody"></tbody></table></div>
+    <h3>Nombres propios a ignorar al detectar el vendor</h3>
+    <input type="text" id="ignoreNames" placeholder="nombre de tu empresa (para no confundirlo con el vendor)">
+    <small class="mute">Evita que la empresa (el cliente en «Bill To») se confunda con el proveedor.</small>
+  </div>
+</section>
+
+<!-- ============ TAB HELP ============ -->
+<section id="tab-help" hidden>
+  <div class="card help" id="helpBody"></div>
+  <div class="card">
+    <h2>Autoprueba (ejemplo de resultado conocido)</h2>
+    <p class="src">Ejecuta la lógica con datos de ejemplo cuyo resultado se conoce de antemano. Todas las filas deben decir PASS.</p>
+    <button class="btn" id="btnSelfTest">Ejecutar autoprueba</button>
+    <div id="selfTestOut" style="margin-top:10px"></div>
+  </div>
+</section>
+
+<section class="card">
+  <h2>Registro de actividad de esta sesión</h2>
+  <div id="log"></div>
+</section>
+</main>
+
+<script>
+'use strict';
+/* =====================================================================
+   NÚCLEO DETERMINISTA (sin IA): extracción, nombres, lectura de QBO, conciliación
+   ===================================================================== */
+const Core = (() => {
+  const pad = n => String(n).padStart(2, '0');
+  const MONTHS = {jan:1,feb:2,mar:3,apr:4,may:5,jun:6,jul:7,aug:8,sep:9,sept:9,oct:10,nov:11,dec:12};
+  const isoOk = (y, m, d) => { if (typeof y === 'string') { const p = y.split('-').map(Number); [y, m, d] = p; } if (!(y >= 2000 && y <= 2100)) return false; const dt = new Date(Date.UTC(y, m - 1, d)); return dt.getUTCFullYear() === y && dt.getUTCMonth() === m - 1 && dt.getUTCDate() === d; };
+  const mkIso = (y, m, d) => `${y}-${pad(m)}-${pad(d)}`;
+  const fmtUS = s => s ? `${s.slice(5, 7)}/${s.slice(8, 10)}/${s.slice(0, 4)}` : '';
+  const fmtFile = s => `${s.slice(5, 7)}-${s.slice(8, 10)}-${s.slice(0, 4)}`;
+  const dayNum = s => Math.round(Date.UTC(+s.slice(0, 4), +s.slice(5, 7) - 1, +s.slice(8, 10)) / 86400000);
+  const money = c => ((c < 0 ? '-' : '') + (Math.abs(c) / 100).toLocaleString('en-US', {minimumFractionDigits: 2, maximumFractionDigits: 2}));
+  const parseMoney = str => { const s = String(str ?? '').replace(/[$,\s]/g, ''); if (!/^-?\d+(\.\d{1,2})?$/.test(s)) return null; return Math.round(parseFloat(s) * 100); };
+  const parseUSDate = str => { const m = String(str || '').trim().match(/^(\d{1,2})[\/\-.](\d{1,2})[\/\-.](\d{4})$/); if (!m) return null; const [mo, d, y] = [+m[1], +m[2], +m[3]]; return isoOk(y, mo, d) ? mkIso(y, mo, d) : null; };
+
+  /* ---------- nombres de vendors ---------- */
+  const SUFFIX = /\b(inc|incorporated|llc|l l c|ltd|limited|co|corp|corporation|company|the|lp|llp|pllc|dba)\b/g;
+  const normName = s => { const base = String(s ?? '').toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g, '').replace(/&/g, ' and ').replace(/[^a-z0-9 ]+/g, ' ');
+    const out = base.replace(SUFFIX, ' ').replace(/\s+/g, ' ').trim(); return out || base.replace(/\s+/g, ' ').trim(); };
+  const buildVendorIndex = table => { const map = new Map(), list = [];
+    for (const v of (table && table.vendors) || []) { const name = String(v.name || '').trim(); if (!name) continue;
+      const keys = [name, ...(v.aliases || [])].map(normName).filter(k => k.length >= 3); keys.forEach(k => { if (!map.has(k)) map.set(k, name); }); list.push({name, keys}); }
+    return {map, list}; };
+  const canonVendor = (raw, vi) => { const r = String(raw ?? '').trim(); if (!vi) return r; return vi.map.get(normName(r)) || r; };
+  const similar = (a, b) => { if (!a || !b || a === b) return false; const ta = new Set(a.split(' ').filter(Boolean)), tb = new Set(b.split(' ').filter(Boolean));
+    const [s, l] = ta.size <= tb.size ? [ta, tb] : [tb, ta]; for (const x of s) if (!l.has(x)) return false; return [...s].some(x => x.length >= 3); };
+
+  /* ---------- nombre de archivo ---------- */
+  const sanitizeVendor = v => String(v ?? '').replace(/[\\\/:*?"<>|\u0000-\u001f]/g, ' ').replace(/\s+/g, ' ').trim().replace(/[. ]+$/, '').slice(0, 60).trim();
+  const buildName = (vendor, iso, cents, ext) => `${sanitizeVendor(vendor)}_${fmtFile(iso)}_${(cents / 100).toFixed(2)}${ext}`;
+  const NAME_RE = /^(.+)_(\d{2})-(\d{2})-(\d{4})_(\d+\.\d{2})(?:_(\d+))?(\.[A-Za-z0-9]+)$/;
+  const parseName = name => { const m = String(name).match(NAME_RE); if (!m) return null; const iso = mkIso(+m[4], +m[2], +m[3]); if (!isoOk(+m[4], +m[2], +m[3])) return null;
+    return {vendor: m[1], iso, cents: Math.round(parseFloat(m[5]) * 100), suffix: m[6] ? +m[6] : 1, ext: m[7]}; };
+
+  /* ---------- extracción de campos desde texto ---------- */
+  const scan = (line, pats) => { const hits = [];
+    for (const p of pats) { const re = new RegExp(p.re.source, 'gi'); let m; while ((m = re.exec(line))) { hits.push({idx: m.index, end: m.index + m[0].length, kind: p.kind, tier: p.tier}); if (!m[0].length) re.lastIndex++; } }
+    hits.sort((a, b) => a.idx - b.idx || (b.end - b.idx) - (a.end - a.idx));
+    const out = []; for (const h of hits) { if (out.some(o => h.idx >= o.idx && h.end <= o.end)) continue; out.push(h); } return out.sort((a, b) => a.idx - b.idx); };
+
+  const MONEY_RE = /(?<![\w.,$])(\$\s?)?(\d{1,3}(?:,\d{3})+|\d+)(\.\d{2})?(?!\d|[.,]\d)/g;
+  const moneyTokens = seg => { const out = []; let m; const re = new RegExp(MONEY_RE.source, 'g');
+    while ((m = re.exec(seg))) { if (!m[1] && !m[3]) continue; const int = m[2].replace(/,/g, ''); const cents = parseInt(int, 10) * 100 + (m[3] ? parseInt(m[3].slice(1), 10) : 0); out.push({cents, idx: m.index}); } return out; };
+
+  const AMT_PATS = [
+    {re: /sub\s*-?\s*total/, kind: 'x'},
+    {re: /(sales\s*)?tax(es)?\s*total|total\s*(sales\s*)?tax(es)?/, kind: 'x'},
+    {re: /total\s*(discount|savings|hours|qty|quantity|units|items|weight|paid\s*to\s*date|before)/, kind: 'x'},
+    {re: /\b(sales\s*)?tax(es)?\b|\bvat\b/, kind: 'x'},
+    {re: /\bdiscounts?\b|\bshipping\b|\bfreight\b|\bhandling\b|\bdeposit\b|\bretainage\b/, kind: 'x'},
+    {re: /(previous|prior|past)\s*(balance|due)|balance\s*forward/, kind: 'x'},
+    {re: /(amount|balance|total)\s*due|\bnet\s*due\b|(amount|total)\s*(to\s*pay|payable)|please\s*pay|pay\s*this\s*amount/, kind: 'k', tier: 1},
+    {re: /(grand|invoice|final|order)\s*total|total\s*(amount|usd|invoice|charged|sale)|amount\s*(paid|charged|received)/, kind: 'k', tier: 2},
+    {re: /(?<![a-z])total\b/, kind: 'k', tier: 2},
+  ];
+  const detectAmount = lines => {
+    const cands = [];
+    for (let i = 0; i < lines.length; i++) { const line = lines[i]; const hits = scan(line, AMT_PATS); if (!hits.length) continue;
+      for (let h = 0; h < hits.length; h++) { const k = hits[h]; if (k.kind !== 'k') continue;
+        const regionEnd = h + 1 < hits.length ? hits[h + 1].idx : line.length; const toks = moneyTokens(line.slice(k.end, regionEnd));
+        if (toks.length) { cands.push({tier: k.tier, cents: toks[0].cents, i, label: line.slice(k.idx, k.end)}); continue; }
+        if (k.tier === 1 && h === hits.length - 1 && i + 1 < lines.length && !scan(lines[i + 1], AMT_PATS).length && line.split(/\s+/).length <= 5) {
+          const t2 = moneyTokens(lines[i + 1]); if (t2.length) cands.push({tier: 1, cents: t2[0].cents, i, label: line.slice(k.idx, k.end), stacked: true}); } } }
+    const alts = [...new Set(cands.map(c => c.cents))];
+    if (cands.length) { const best = Math.min(...cands.map(c => c.tier)); const set = cands.filter(c => c.tier === best); const distinct = [...new Set(set.map(c => c.cents))];
+      if (distinct.length === 1) return {cents: distinct[0], tier: best, label: set[0].label, conf: 'alta', alts, note: ''};
+      const last = set[set.length - 1]; return {cents: last.cents, tier: best, label: last.label, conf: 'baja', alts, note: 'Varios montos con etiqueta de total (' + distinct.map(money).join(', ') + '): verifica cuál es el correcto'}; }
+    const all = []; lines.forEach(l => moneyTokens(l).forEach(t => all.push(t.cents)));
+    if (all.length) return {cents: Math.max(...all), tier: 3, label: '(sin etiqueta)', conf: 'baja', alts: [...new Set(all)].sort((a, b) => b - a).slice(0, 5), note: 'No encontré «Total / Amount Due»; propuse el monto mayor del documento'};
+    return {cents: null, tier: 9, label: '', conf: 'baja', alts: [], note: 'No encontré ningún monto'};
+  };
+
+  const DATE_PATS = [
+    {re: /due\s*date|\bdate[ ]due\b(?!\s*date)|payment\s*due|\bdue\s*on\b|\bdue\b|ship(?:ping|ped)?\s*date|date\s*shipped|delivery\s*date|expir\w*\s*date|service\s*period|period\s*(?:start|end|ending)|print(?:ed)?\s*date|\bterms\b|paid\s*date|date\s*paid|\bpaid\s*on\b|\bnet\s*\d+/, kind: 'x'},
+    {re: /invoice\s*date|bill\s*date|date\s*of\s*invoice|inv\.?\s*date|issue(?:d)?\s*date|date\s*issued|invoice\s*dated|statement\s*date|transaction\s*date|date\s*of\s*(?:sale|purchase|transaction)|purchase\s*date|receipt\s*date|sale\s*date/, kind: 'k', tier: 1},
+    {re: /(?<![a-z])date\b/, kind: 'k', tier: 2},
+  ];
+  const MON = 'jan(?:uary)?|feb(?:ruary)?|mar(?:ch)?|apr(?:il)?|may|jun(?:e)?|jul(?:y)?|aug(?:ust)?|sep(?:t(?:ember)?)?|oct(?:ober)?|nov(?:ember)?|dec(?:ember)?';
+  const dateTokens = line => { const toks = [];
+    let m, re = /(?<![\d\/.-])(0?[1-9]|1[0-2])[\/.-](0?[1-9]|[12]\d|3[01])[\/.-](\d{4}|\d{2})(?!\d)/g;
+    while ((m = re.exec(line))) { let y = +m[3]; if (m[3].length === 2) y += 2000; if (isoOk(y, +m[1], +m[2])) toks.push({iso: mkIso(y, +m[1], +m[2]), idx: m.index, end: m.index + m[0].length}); }
+    re = /(?<!\d)(\d{4})-(\d{2})-(\d{2})(?!\d)/g; while ((m = re.exec(line))) { if (isoOk(+m[1], +m[2], +m[3])) toks.push({iso: mkIso(+m[1], +m[2], +m[3]), idx: m.index, end: m.index + m[0].length}); }
+    re = new RegExp('\\b(' + MON + ')\\.?\\s+(\\d{1,2})(?:st|nd|rd|th)?,?\\s+(\\d{4})\\b', 'gi');
+    while ((m = re.exec(line))) { const mo = MONTHS[m[1].toLowerCase().slice(0, 4) === 'sept' ? 'sept' : m[1].toLowerCase().slice(0, 3)]; if (mo && isoOk(+m[3], mo, +m[2])) toks.push({iso: mkIso(+m[3], mo, +m[2]), idx: m.index, end: m.index + m[0].length}); }
+    re = new RegExp('\\b(\\d{1,2})(?:st|nd|rd|th)?\\s+(' + MON + ')\\.?,?\\s+(\\d{4})\\b', 'gi');
+    while ((m = re.exec(line))) { const mo = MONTHS[m[2].toLowerCase().slice(0, 4) === 'sept' ? 'sept' : m[2].toLowerCase().slice(0, 3)]; if (mo && isoOk(+m[3], mo, +m[1])) toks.push({iso: mkIso(+m[3], mo, +m[1]), idx: m.index, end: m.index + m[0].length}); }
+    toks.sort((a, b) => a.idx - b.idx); const out = []; for (const t of toks) { if (out.some(o => t.idx < o.end && t.end > o.idx)) continue; out.push(t); } return out; };
+  const detectDate = lines => {
+    const cands = [];
+    for (let i = 0; i < lines.length; i++) { const line = lines[i]; const hits = scan(line, DATE_PATS); if (!hits.length) continue; const toks = dateTokens(line);
+      if (toks.length) { for (let h = 0; h < hits.length; h++) { const k = hits[h]; if (k.kind !== 'k') continue; const regionEnd = h + 1 < hits.length ? hits[h + 1].idx : line.length;
+          const t = toks.find(t => t.idx >= k.end && t.idx < regionEnd); if (t) cands.push({tier: k.tier, iso: t.iso, i}); } }
+      else if (i + 1 < lines.length) { const nxt = dateTokens(lines[i + 1]); if (!nxt.length) continue; const nh = scan(lines[i + 1], DATE_PATS); if (nh.length && nh[0].idx <= 2) continue;
+        const hdrs = hits.filter(h => h.kind === 'k' || /date|due/i.test(line.slice(h.idx, h.end)));
+        if (hdrs.length === nxt.length) hdrs.forEach((h, j) => { if (h.kind === 'k') cands.push({tier: h.tier, iso: nxt[j].iso, i}); });
+        else if (hdrs.length === 1 && hdrs[0].kind === 'k') cands.push({tier: hdrs[0].tier, iso: nxt[0].iso, i}); } }
+    const alts = [...new Set(cands.map(c => c.iso))];
+    if (cands.length) { const best = Math.min(...cands.map(c => c.tier)); const set = cands.filter(c => c.tier === best).sort((a, b) => a.i - b.i); const distinct = [...new Set(set.map(c => c.iso))];
+      return {iso: set[0].iso, tier: best, conf: distinct.length === 1 ? 'alta' : 'media', alts, note: distinct.length === 1 ? '' : 'Varias fechas con etiqueta (' + distinct.map(fmtUS).join(', ') + '); tomé la primera'}; }
+    for (const line of lines) { if (scan(line, DATE_PATS).some(h => h.kind === 'x')) continue; const t = dateTokens(line); if (t.length) return {iso: t[0].iso, tier: 3, conf: 'baja', alts, note: 'Fecha sin etiqueta (primera del documento)'}; }
+    return {iso: null, tier: 9, conf: 'baja', alts: [], note: 'No encontré fecha'};
+  };
+
+  const BLACK = /^(invoice|statement|receipt|bill|page|date|tax|customer|ship|remit|payment|order|quote|estimate|credit memo|packing|sold to|bill to|account|phone|fax|tel|email|www|http|description|qty)/i;
+  const detectVendor = (lines, vi, ignoreKeys) => {
+    ignoreKeys = (ignoreKeys || []).map(normName).filter(Boolean);
+    const isOwn = k => ignoreKeys.some(g => k.includes(g) || g.includes(k));
+    const text = ' ' + lines.map(l => normName(l)).join(' | ') + ' '; const found = [];
+    for (const v of (vi ? vi.list : [])) { let best = -1; for (const k of v.keys) { if (isOwn(k)) continue; const idx = text.indexOf(' ' + k + ' '); if (idx >= 0 && (best < 0 || idx < best)) best = idx; } if (best >= 0) found.push({name: v.name, idx: best}); }
+    if (found.length) { found.sort((a, b) => a.idx - b.idx); return {name: found[0].name, known: true, conf: found.length > 1 ? 'media' : 'alta', note: found.length > 1 ? 'Se mencionan varios vendors de la tabla (' + found.map(f => f.name).join(', ') + '); tomé el que aparece primero' : ''}; }
+    for (let i = 0; i < Math.min(lines.length, 14); i++) { let l = lines[i].trim().split(/\s{3,}/)[0].trim(); if (l.length < 3 || l.length > 60 || !/[A-Za-z]{3}/.test(l) || /^\d/.test(l) || BLACK.test(l) || /@|https?:|www\.|\d{3}[-. ]\d{3,4}/.test(l)) continue;
+      if (isOwn(normName(l))) continue; return {name: l, known: false, conf: 'baja', note: 'Vendor no está en la tabla; propuse la primera línea del documento. Confírmalo o corrígelo'}; }
+    return {name: '', known: false, conf: 'baja', note: 'No pude identificar el vendor'};
+  };
+
+  const RANK = {alta: 3, media: 2, baja: 1};
+  const extractFields = (lines, ctx) => { ctx = ctx || {};
+    const V = detectVendor(lines, ctx.vIndex, ctx.ignoreKeys), D = detectDate(lines), A = detectAmount(lines);
+    const conf = [V.conf, D.conf, A.conf].reduce((a, b) => RANK[a] <= RANK[b] ? a : b);
+    return {vendor: V, date: D, amount: A, conf, notes: [V.note, D.note, A.note].filter(Boolean)}; };
+
+  /* ---------- lectura del Excel de QBO ---------- */
+  const normHdr = s => String(s ?? '').toLowerCase().replace(/[^a-z0-9 ]+/g, ' ').replace(/\s+/g, ' ').trim();
+  const HDR = {
+    date: ['date', 'transaction date', 'txn date', 'bill date', 'fecha'],
+    type: ['transaction type', 'type', 'txn type', 'tipo', 'tipo de transaccion'],
+    num: ['num', 'no', 'number', 'ref no', 'doc number', 'doc num', 'bill no', 'numero'],
+    vendor: ['vendor', 'name', 'payee', 'supplier', 'vendor name', 'payee vendor', 'proveedor', 'nombre'],
+    amount: ['amount', 'total', 'total amount', 'monto', 'importe', 'amount usd'],
+    memo: ['memo description', 'memo', 'description', 'memo desc', 'descripcion'],
+  };
+  const detectMapping = row => { const cells = row.map(normHdr); const map = {}; const used = new Set();
+    for (const f of Object.keys(HDR)) { for (const syn of HDR[f]) { const j = cells.findIndex((c, ix) => c === syn && !used.has(ix)); if (j >= 0) { map[f] = j; used.add(j); break; } } } return map; };
+  const findHeader = rows => { let best = null;
+    for (let r = 0; r < Math.min(rows.length, 40); r++) { const map = detectMapping(rows[r] || []); const req = ['date', 'vendor', 'amount'].filter(f => map[f] != null).length; const score = Object.keys(map).length + req;
+      if (req === 3) return {row: r, map, complete: true}; if (!best || score > best.score) best = {row: r, map, score, complete: false}; }
+    return best ? {row: best.row, map: best.map, complete: false} : {row: 0, map: {}, complete: false}; };
+  const toISO = v => { if (v == null || v === '') return null;
+    if (v instanceof Date) return isoOk(v.getFullYear(), v.getMonth() + 1, v.getDate()) ? mkIso(v.getFullYear(), v.getMonth() + 1, v.getDate()) : null;
+    if (typeof v === 'number') { if (v < 20000 || v > 80000) return null; const d = new Date(Date.UTC(1899, 11, 30) + Math.floor(v) * 86400000); return mkIso(d.getUTCFullYear(), d.getUTCMonth() + 1, d.getUTCDate()); }
+    const t = dateTokens(String(v)); return t.length ? t[0].iso : null; };
+  const toCents = v => { if (v == null || v === '') return null;
+    if (typeof v === 'number') return Math.round(v * 100);
+    let s = String(v).trim(); let neg = false; if (/^\(.*\)$/.test(s)) { neg = true; s = s.slice(1, -1); } s = s.replace(/[$,\s]/g, ''); if (s.startsWith('-')) { neg = !neg; s = s.slice(1); }
+    if (!/^\d+(\.\d+)?$/.test(s)) return null; const c = Math.round(parseFloat(s) * 100); return neg ? -c : c; };
+  const INCLUDE_DEFAULT = /^(bill|expense|check|cheque|credit card expense|cash expense)$/;
+  const parseTxns = (rows, hdrRow, map) => { const out = []; let ignored = 0;
+    for (let r = hdrRow + 1; r < rows.length; r++) { const row = rows[r] || []; if (row.every(c => c == null || c === '')) continue;
+      const iso = toISO(row[map.date]); const cents = toCents(row[map.amount]); if (!iso || cents == null) { ignored++; continue; }
+      const type = map.type != null ? String(row[map.type] ?? '').trim() : '';
+      out.push({id: 'Q' + (r + 1), rowNum: r + 1, iso, type, typeNorm: type.toLowerCase().replace(/\s+/g, ' '), num: map.num != null ? String(row[map.num] ?? '').trim() : '', vendor: String(row[map.vendor] ?? '').trim(), cents: Math.abs(cents), signed: cents, memo: map.memo != null ? String(row[map.memo] ?? '').trim() : ''}); }
+    return {txns: out, ignored}; };
+  const consolidate = (txns, vi) => { const g = new Map();
+    for (const t of txns) { if (!t.num) { g.set('#' + t.id, {...t, lines: 1}); continue; } const k = [t.iso, t.typeNorm, t.num, normName(canonVendor(t.vendor, vi))].join('|'); if (g.has(k)) { const x = g.get(k); x.signed += t.signed; x.cents = Math.abs(x.signed); x.lines++; } else g.set(k, {...t, lines: 1}); }
+    return [...g.values()]; };
+  const sigOf = (t, vi) => [t.iso, t.typeNorm, t.num, t.cents, normName(canonVendor(t.vendor, vi))].join('|');
+
+  /* ---------- conciliación ---------- */
+  const reconcile = (txns, supports, o) => { o = o || {}; const tol = o.tolDays ?? 5, win = o.reviewWindow ?? 45, vi = o.vIndex;
+    const vk = v => normName(canonVendor(v, vi));
+    txns.forEach((t, i) => { t._vk = vk(t.vendor); t._dn = dayNum(t.iso); t._ord = i; t._abs = Math.abs(t.cents); });
+    supports.forEach((s, i) => { s._vk = vk(s.vendor); s._dn = dayNum(s.iso); s._ord = i; s._abs = Math.abs(s.cents); });
+    const pairs = [], usedT = new Set(), usedS = new Set();
+    const add = (t, s, status, why) => { usedT.add(t); usedS.add(s); pairs.push({t, s, status, dd: Math.abs(t._dn - s._dn), dsd: s._dn - t._dn, dc: s._abs - t._abs, why: why || ''}); };
+    if (o.prior) for (const s of supports) { const sig = o.prior.get(s.folder + '/' + s.name); if (!sig) continue; const t = txns.find(x => !usedT.has(x) && sigOf(x, vi) === sig); if (t) add(t, s, 'CONCILIADO', 'Aceptado en una corrida anterior'); }
+    const same = (t, s) => t._vk && t._vk === s._vk;
+    const tiers = [
+      {st: 'CONCILIADO', ok: (t, s) => same(t, s) && t._abs === s._abs && Math.abs(t._dn - s._dn) <= tol, by: 'date', why: 'Vendor y monto exactos; fecha dentro de tolerancia'},
+      {st: 'FECHA_FUERA', ok: (t, s) => same(t, s) && t._abs === s._abs && Math.abs(t._dn - s._dn) <= win, by: 'date', why: 'Vendor y monto exactos, pero la fecha excede la tolerancia'},
+      {st: 'MONTO_DIF', ok: (t, s) => same(t, s) && t._abs !== s._abs && Math.abs(t._dn - s._dn) <= tol, by: 'amt', why: 'Mismo vendor y fecha cercana; el monto es distinto (¿error de captura o pago parcial?)'},
+      {st: 'VENDOR_DIF', ok: (t, s) => t._vk && s._vk && t._abs === s._abs && Math.abs(t._dn - s._dn) <= tol && similar(t._vk, s._vk), by: 'date', why: 'Monto y fecha coinciden; el nombre del vendor es parecido pero no igual (¿falta un alias?)'},
+    ];
+    for (const tier of tiers) { const c = [];
+      for (const t of txns) { if (usedT.has(t)) continue; for (const s of supports) { if (usedS.has(s)) continue; if (tier.ok(t, s)) c.push({t, s, dd: Math.abs(t._dn - s._dn), da: Math.abs(t._abs - s._abs)}); } }
+      c.sort((a, b) => (tier.by === 'amt' ? a.da - b.da || a.dd - b.dd : a.dd - b.dd || a.da - b.da) || ((b.s.locked ? 1 : 0) - (a.s.locked ? 1 : 0)) || a.t._ord - b.t._ord || a.s._ord - b.s._ord);
+      for (const x of c) { if (usedT.has(x.t) || usedS.has(x.s)) continue; add(x.t, x.s, tier.st, tier.why); } }
+    const pend = txns.filter(t => !usedT.has(t)).map(t => ({t, status: 'PENDIENTE', why: t._vk ? 'Sin soporte recibido para este vendor, monto y fecha' : 'La transacción no tiene vendor en QBO'}));
+    const sin = supports.filter(s => !usedS.has(s)).map(s => { const dup = pairs.find(p => p.s._vk === s._vk && p.s._abs === s._abs && Math.abs(p.s._dn - s._dn) <= tol);
+      return {s, status: 'SIN_TXN', why: dup ? 'Posible soporte duplicado de «' + dup.s.name + '»' : 'No hay transacción en el Excel (¿factura no registrada en QBO, otro período o vendor distinto?)'}; });
+    const key = p => 'CONCILIADO FECHA_FUERA MONTO_DIF VENDOR_DIF'.split(' ').indexOf(p.status);
+    pairs.sort((a, b) => key(a) - key(b) || a.t.iso.localeCompare(b.t.iso) || a.t._ord - b.t._ord);
+    pend.sort((a, b) => (a.t.vendor || '').localeCompare(b.t.vendor || '') || a.t.iso.localeCompare(b.t.iso));
+    return {pairs, pend, sin}; };
+  const summarize = (res, txns) => { const sum = a => a.reduce((x, y) => x + y, 0); const conc = res.pairs.filter(p => p.status === 'CONCILIADO'), rev = res.pairs.filter(p => p.status !== 'CONCILIADO');
+    const r = {total: {n: txns.length, c: sum(txns.map(t => t._abs))}, conc: {n: conc.length, c: sum(conc.map(p => p.t._abs)), prev: conc.filter(p => p.s.locked).length}, rev: {n: rev.length, c: sum(rev.map(p => p.t._abs))}, pend: {n: res.pend.length, c: sum(res.pend.map(p => p.t._abs))}, sin: {n: res.sin.length, c: sum(res.sin.map(p => p.s._abs))}};
+    r.control = r.total.c === r.conc.c + r.rev.c + r.pend.c && r.total.n === r.conc.n + r.rev.n + r.pend.n; return r; };
+
+  /* ---------- lector de correos .eml ---------- */
+  const b64ToBytes = s => { const bin = atob(s.replace(/[^A-Za-z0-9+\/]/g, '')); const u = new Uint8Array(bin.length); for (let i = 0; i < bin.length; i++) u[i] = bin.charCodeAt(i); return u; };
+  const latin1ToBytes = s => { const u = new Uint8Array(s.length); for (let i = 0; i < s.length; i++) u[i] = s.charCodeAt(i) & 255; return u; };
+  const decode2047 = s => String(s || '').replace(/(\?=)\s+(=\?)/g, '$1$2').replace(/=\?([^?]+)\?([bBqQ])\?([^?]*)\?=/g, (m, cs, enc, t) => { try { let bytes; if (enc.toUpperCase() === 'B') bytes = b64ToBytes(t); else bytes = latin1ToBytes(t.replace(/_/g, ' ').replace(/=([0-9A-Fa-f]{2})/g, (x, h) => String.fromCharCode(parseInt(h, 16)))); return new TextDecoder(cs.toLowerCase() === 'utf8' ? 'utf-8' : cs).decode(bytes); } catch (e) { return m; } });
+  const splitHeaders = raw => { const m = raw.match(/\r?\n\r?\n/); let head, body; if (!m) { head = raw; body = ''; } else { head = raw.slice(0, m.index); body = raw.slice(m.index + m[0].length); }
+    head = head.replace(/\r?\n[ \t]+/g, ' '); const headers = {}; for (const line of head.split(/\r?\n/)) { const i = line.indexOf(':'); if (i > 0) { const k = line.slice(0, i).trim().toLowerCase(); if (!(k in headers)) headers[k] = line.slice(i + 1).trim(); } } return {headers, body}; };
+  const parseCT = h => { h = h || 'text/plain'; const type = h.split(';')[0].trim().toLowerCase(); const params = {}; const re = /;\s*([\w*-]+)\s*=\s*(?:"([^"]*)"|([^;\s]+))/g; let m; while ((m = re.exec(h))) params[m[1].toLowerCase()] = m[2] ?? m[3]; return {type, params}; };
+  const fileNameOf = (headers, ct) => { let n = ct.params['name'] || ct.params['name*'];
+    const cd = headers['content-disposition'] || ''; const m = cd.match(/filename\*?\s*=\s*(?:"([^"]*)"|([^;]+))/i); if (m) n = m[1] ?? m[2];
+    if (!n) return ''; n = n.trim(); const x = n.match(/^([\w-]+)'[^']*'(.*)$/); if (x) { try { n = decodeURIComponent(x[2]); } catch (e) {} } return decode2047(n).replace(/[\\\/:*?"<>|]/g, '_'); };
+  const decodeBody = (body, cte) => { if (cte === 'base64') return b64ToBytes(body);
+    if (cte === 'quoted-printable') { const s = body.replace(/=\r?\n/g, '').replace(/=([0-9A-Fa-f]{2})/g, (m, h) => String.fromCharCode(parseInt(h, 16))); return latin1ToBytes(s); } return latin1ToBytes(body); };
+  const splitMultipart = (body, b) => { const e = b.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'); const re = new RegExp('(?:^|\\r?\\n)--' + e + '(--)?[ \\t]*(?=\\r?\\n|$)', 'g'); const idx = []; let m; while ((m = re.exec(body))) { idx.push({s: m.index, e: m.index + m[0].length}); if (m[1]) break; }
+    const parts = []; for (let i = 0; i < idx.length - 1; i++) parts.push(body.slice(idx[i].e, idx[i + 1].s).replace(/^\r?\n/, '')); return parts; };
+  const walkMime = (raw, out, depth) => { if (depth > 6) return; const {headers, body} = splitHeaders(raw); const ct = parseCT(headers['content-type']); const cd = (headers['content-disposition'] || '').toLowerCase(); const cte = (headers['content-transfer-encoding'] || '7bit').trim().toLowerCase();
+    if (ct.type.startsWith('multipart/') && ct.params.boundary) { splitMultipart(body, ct.params.boundary).forEach(p => walkMime(p, out, depth + 1)); return; }
+    if (ct.type === 'message/rfc822') { const inner = cte === 'base64' ? Array.from(decodeBody(body, 'base64')).map(c => String.fromCharCode(c)).join('') : body;
+      const ih = splitHeaders(inner).headers; out.nested.push({from: decode2047(ih.from || ''), subject: decode2047(ih.subject || ''), date: ih.date || ''}); walkMime(inner, out, depth + 1); return; }
+    const name = fileNameOf(headers, ct);
+    if (ct.type.startsWith('text/') && !name && !/attachment/.test(cd)) return;
+    if (/attachment/.test(cd) || name || ct.type.startsWith('application/') || ct.type.startsWith('image/')) {
+      let bytes; try { bytes = decodeBody(body, cte); } catch (e) { out.errors.push('No pude decodificar «' + (name || ct.type) + '»'); return; }
+      out.atts.push({name: name || 'adjunto', type: ct.type, bytes, inline: /inline/.test(cd) || !!headers['content-id']}); } };
+  const parseEml = buf => { const u = new Uint8Array(buf); let bin = ''; for (let i = 0; i < u.length; i += 0x8000) bin += String.fromCharCode.apply(null, u.subarray(i, i + 0x8000));
+    const {headers} = splitHeaders(bin); const out = {atts: [], nested: [], errors: []}; walkMime(bin, out, 0);
+    return {from: decode2047(headers.from || ''), subject: decode2047(headers.subject || ''), date: headers.date || '', nested: out.nested, atts: out.atts, errors: out.errors}; };
+
+  function regKey(e) { return e.hash ? 'h:' + e.hash : 'n:' + [e.originalName || e.savedName, e.date, e.amount].join('|'); }
+  function regTime(e) { return e.movedAt || e.savedAt || ''; }
+  function mergeRegistry(remote, local) { const m = new Map(); const put = (e, pref) => { const k = regKey(e), o = m.get(k), te = regTime(e), to = o ? regTime(o) : ''; if (!o || te > to || (te === to && pref)) m.set(k, e); };
+    ((remote && remote.entries) || []).forEach(e => put(e, false)); ((local && local.entries) || []).forEach(e => put(e, true));
+    return {version: 1, entries: [...m.values()].sort((a, b) => (regTime(a) < regTime(b) ? -1 : regTime(a) > regTime(b) ? 1 : 0))}; }
+  return {mergeRegistry, pad, isoOk, mkIso, fmtUS, fmtFile, dayNum, money, parseMoney, parseUSDate, normName, buildVendorIndex, canonVendor, similar, sanitizeVendor, buildName, parseName,
+    scan, DATE_PATS, AMT_PATS, extractFields, detectAmount, detectDate, detectVendor, moneyTokens, dateTokens, findHeader, detectMapping, parseTxns, consolidate, sigOf, toISO, toCents, INCLUDE_DEFAULT, reconcile, summarize, parseEml};
+})();
+window.SoportesCore = Core;
+
+/* =====================================================================
+   ALMACENAMIENTO · Google Drive (API v3) con inicio de sesión de Google (GIS)
+   ===================================================================== */
+const GOOGLE_CLIENT_ID = '333025329319-g82co3qfjl2ul3oc2djvjhrs7oqu7v8s.apps.googleusercontent.com'; // Pega aquí el Client ID de Google (o captúralo en «Conexión con Google»). No es un secreto.
+const CFG_KEY = 'soportes.cfg.v1';
+const FOLDER_MIME = 'application/vnd.google-apps.folder';
+const API = 'https://www.googleapis.com/drive/v3', UPL = 'https://www.googleapis.com/upload/drive/v3';
+const sleep = ms => new Promise(r => setTimeout(r, ms));
+const qs = s => String(s).replace(/\\/g, '\\\\').replace(/'/g, "\\'");
+const Drive = {
+  token: null, exp: 0, backoff: 500,
+  cid() { return (S.cfg.clientId || '').trim() || GOOGLE_CLIENT_ID; },
+  scope() { return S.cfg.fullScope ? 'https://www.googleapis.com/auth/drive' : 'https://www.googleapis.com/auth/drive.file'; },
+  ok() { return !!(this.token && Date.now() < this.exp - 300000); },
+  auth(force) { return new Promise((res, rej) => {
+    if (!(window.google && google.accounts && google.accounts.oauth2)) return rej(new Error('No cargó el inicio de sesión de Google (se requiere internet). Recarga la página.'));
+    if (!this.cid()) return rej(new Error('Falta el Client ID de Google. Captúralo en «Conexión con Google».'));
+    const cfg = {client_id: this.cid(), scope: this.scope(),
+      callback: r => { if (r.error) return rej(new Error('Google rechazó el acceso: ' + (r.error_description || r.error))); this.token = r.access_token; this.exp = Date.now() + (+r.expires_in || 3600) * 1000; res(r.access_token); },
+      error_callback: e => rej(new Error('No se completó el inicio de sesión de Google (' + ((e && e.type) || 'cancelado') + '). Si el navegador bloqueó la ventana, permítela y pulsa de nuevo.'))};
+    const sel = force || !S.cfg.email; if (!sel) cfg.login_hint = S.cfg.email;
+    google.accounts.oauth2.initTokenClient(cfg).requestAccessToken({prompt: sel ? 'select_account' : ''}); }); },
+  async session(force) { if (!force && this.ok()) return; await this.auth(force); flushVendors(); },
+  async api(url, o = {}, tries = 0, reauth = false) {
+    let r; try { r = await fetch(url, {...o, headers: {...(o.headers || {}), Authorization: 'Bearer ' + this.token}}); }
+    catch (e) { if (tries < 3) { await sleep(this.backoff * 2 ** tries); return this.api(url, o, tries + 1, reauth); } throw new Error('Sin conexión con Google Drive'); }
+    if (r.status === 401 && !reauth) { this.token = null; await this.auth(false); return this.api(url, o, tries, true); }
+    if (r.ok) return r;
+    let msg = '', reason = ''; try { const j = await r.json(); msg = (j.error && j.error.message) || ''; reason = (j.error && j.error.errors && j.error.errors[0] && j.error.errors[0].reason) || ''; } catch (e) {}
+    if ((r.status === 429 || r.status >= 500 || (r.status === 403 && /rateLimit/i.test(reason))) && tries < 4) { await sleep(this.backoff * 2 ** tries); return this.api(url, o, tries + 1, reauth); }
+    const err = new Error(`Drive ${r.status}: ${msg || r.statusText}`); err.status = r.status; throw err; },
+  async jget(url) { return (await this.api(url)).json(); },
+  async about() { return (await this.jget(API + '/about?fields=user(emailAddress,displayName)')).user; },
+  async get(id) { return this.jget(`${API}/files/${encodeURIComponent(id)}?fields=id,name,mimeType,trashed&supportsAllDrives=true`); },
+  async list(pid) { const out = []; let pt = ''; do {
+      const u = `${API}/files?q=${encodeURIComponent(`'${pid}' in parents and trashed=false`)}&fields=${encodeURIComponent('nextPageToken,files(id,name,mimeType,size)')}&pageSize=1000&supportsAllDrives=true&includeItemsFromAllDrives=true${pt ? '&pageToken=' + encodeURIComponent(pt) : ''}`;
+      const j = await this.jget(u); (j.files || []).forEach(f => out.push({id: f.id, name: f.name, kind: f.mimeType === FOLDER_MIME ? 'directory' : 'file', size: +f.size || 0})); pt = j.nextPageToken || ''; } while (pt); return out; },
+  async find(name, pid, folderOnly) { const q = `name='${qs(name)}' and trashed=false` + (folderOnly ? ` and mimeType='${FOLDER_MIME}'` : '') + (pid ? ` and '${pid}' in parents` : '');
+    const j = await this.jget(`${API}/files?q=${encodeURIComponent(q)}&fields=${encodeURIComponent('files(id,name,mimeType)')}&orderBy=createdTime&pageSize=100&supportsAllDrives=true&includeItemsFromAllDrives=true`); return j.files || []; },
+  async createFolder(name, pid) { const r = await this.api(`${API}/files?fields=id,name&supportsAllDrives=true`, {method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify({name, mimeType: FOLDER_MIME, ...(pid ? {parents: [pid]} : {})})}); return r.json(); },
+  async sub(pid, name, create = true) { const f = await this.find(name, pid, true); if (f.length) return {id: f[0].id, name: f[0].name}; if (!create) return null; return this.createFolder(name, pid); },
+  async upload(pid, name, blob, mime) { const b = '----sp' + Math.random().toString(36).slice(2); mime = mime || 'application/octet-stream';
+    const body = new Blob([`--${b}\r\nContent-Type: application/json; charset=UTF-8\r\n\r\n${JSON.stringify({name, parents: [pid]})}\r\n--${b}\r\nContent-Type: ${mime}\r\n\r\n`, blob, `\r\n--${b}--`]);
+    return (await this.api(`${UPL}/files?uploadType=multipart&fields=id,name,size&supportsAllDrives=true`, {method: 'POST', headers: {'Content-Type': 'multipart/related; boundary=' + b}, body})).json(); },
+  async updateMedia(id, blob, mime) { return (await this.api(`${UPL}/files/${encodeURIComponent(id)}?uploadType=media&fields=id,name,size&supportsAllDrives=true`, {method: 'PATCH', headers: {'Content-Type': mime || 'application/octet-stream'}, body: blob})).json(); },
+  async read(id) { return (await this.api(`${API}/files/${encodeURIComponent(id)}?alt=media&supportsAllDrives=true`)).arrayBuffer(); },
+  async move(id, fromId, toId, newName) { const cur = await this.jget(`${API}/files/${encodeURIComponent(id)}?fields=parents,trashed&supportsAllDrives=true`);
+    if (cur.trashed || !(cur.parents || []).includes(fromId)) { const e = new Error('El archivo ya no está en la carpeta de origen'); e.status = 404; throw e; }
+    return (await this.api(`${API}/files/${encodeURIComponent(id)}?addParents=${encodeURIComponent(toId)}&removeParents=${encodeURIComponent(fromId)}&fields=id,name,parents&supportsAllDrives=true`, {method: 'PATCH', headers: {'Content-Type': 'application/json'}, body: JSON.stringify(newName ? {name: newName} : {})})).json(); },
+  async trash(id) { return (await this.api(`${API}/files/${encodeURIComponent(id)}?supportsAllDrives=true&fields=id`, {method: 'PATCH', headers: {'Content-Type': 'application/json'}, body: JSON.stringify({trashed: true})})).json(); },
+  async readJSON(pid, name) { const f = (await this.find(name, pid, false))[0]; if (!f) return null; const t = new TextDecoder().decode(await this.read(f.id)); try { return JSON.parse(t); } catch (e) { throw new Error(`«${name}» en Drive no es un JSON válido; no se sobrescribe. Revísalo en _Control.`); } },
+  async writeJSON(pid, name, obj) { const blob = new Blob([JSON.stringify(obj, null, 2)], {type: 'application/json'}); const f = (await this.find(name, pid, false))[0]; return f ? this.updateMedia(f.id, blob, 'application/json') : this.upload(pid, name, blob, 'application/json'); },
+};
+
+async function sha256(buf) { if (!(window.crypto && crypto.subtle)) return null; const d = await crypto.subtle.digest('SHA-256', buf); return [...new Uint8Array(d)].map(b => b.toString(16).padStart(2, '0')).join(''); }
+
+/* =====================================================================
+   ESTADO Y UTILIDADES UI
+   ===================================================================== */
+const $ = (s, r = document) => r.querySelector(s);
+const $$ = (s, r = document) => [...r.querySelectorAll(s)];
+const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({'&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;'}[c]));
+const S = {root: null, enProceso: null, ctrl: null, email: '', vDirty: false, cfg: {clientId: '', fullScope: false, rootName: 'Soportes_Facturas', rootId: null, email: '', operator: ''}, vendors: {vendors: []}, ignore: '', vIndex: Core.buildVendorIndex({vendors: []}),
+  registry: {version: 1, entries: []}, items: [], sel: null, supports: [], nonStd: [], qbo: null, result: null, tol: 5, consolidate: false, view: 'CONCILIADO'};
+const IMG_EXT = ['.png', '.jpg', '.jpeg', '.webp', '.gif'];
+const extOf = n => { const m = String(n).toLowerCase().match(/\.[a-z0-9]+$/); return m ? m[0] : ''; };
+function log(msg, cls) { const d = document.createElement('div'); if (cls) d.className = cls; d.textContent = new Date().toLocaleTimeString('en-US') + '  ' + msg; const L = $('#log'); L.appendChild(d); L.scrollTop = L.scrollHeight; }
+const ignoreKeys = () => S.ignore.split(',').map(s => s.trim()).filter(Boolean);
+function rebuildIndex() { S.vIndex = Core.buildVendorIndex(S.vendors); $('#dlVendors').innerHTML = S.vendors.vendors.map(v => `<option value="${esc(v.name)}">`).join(''); }
+let vSaveT = null;
+function persistVendors() { try { localStorage.setItem('soportes.vendors.v1', JSON.stringify({vendors: S.vendors.vendors, ignore: S.ignore})); } catch (e) {}
+  S.vDirty = true; clearTimeout(vSaveT); vSaveT = setTimeout(flushVendors, 400); }
+async function flushVendors() { if (!S.ctrl || !S.vDirty) return; try { await Drive.writeJSON(S.ctrl.id, 'vendors.json', {vendors: S.vendors.vendors, ignore: S.ignore}); S.vDirty = false; } catch (e) { log('No pude guardar vendors.json en Drive (se reintenta al reconectar): ' + e.message, 'e'); } }
+async function saveRegistry() { if (!S.ctrl) return false; try { const remote = await Drive.readJSON(S.ctrl.id, 'registro_soportes.json'); S.registry = Core.mergeRegistry(remote, S.registry); await Drive.writeJSON(S.ctrl.id, 'registro_soportes.json', S.registry); return true; } catch (e) { log('No pude guardar el registro: ' + e.message, 'e'); return false; } }
+function addVendorIfNew(name, alias) { name = String(name || '').trim(); if (!name) return false; const k = Core.normName(name); let v = S.vendors.vendors.find(x => Core.normName(x.name) === k || (x.aliases || []).some(a => Core.normName(a) === k));
+  if (!v) { v = {name, aliases: []}; S.vendors.vendors.push(v); }
+  if (alias && Core.normName(alias) !== Core.normName(v.name) && !(v.aliases || []).some(a => Core.normName(a) === Core.normName(alias))) { v.aliases = v.aliases || []; v.aliases.push(alias); } return true; }
+
+/* ---------- pestañas ---------- */
+$('#tabs').addEventListener('click', e => { const b = e.target.closest('button'); if (!b) return; $$('#tabs button').forEach(x => x.classList.toggle('on', x === b)); ['proc', 'conc', 'vend', 'help'].forEach(t => $('#tab-' + t).hidden = t !== b.dataset.tab); });
+
+/* ---------- conexión con Google Drive ---------- */
+const saveCfg = () => { try { localStorage.setItem(CFG_KEY, JSON.stringify(S.cfg)); } catch (e) {} };
+function renderFolder() { const b = $('#folderBox');
+  if (S.root) b.innerHTML = `<span class="pill ok">Conectado</span><span class="name">${esc(S.root.name)}</span><span class="src">${esc(S.email || '')}</span><button class="btn sec" id="gSwitch">Cambiar cuenta</button>`;
+  else if (S.cfg.rootId) b.innerHTML = `<span class="pill wait">Sesión por reconectar</span><span class="name">${esc(S.cfg.rootName)}</span><button class="btn" id="gConnect">Reconectar con Google</button>`;
+  else b.innerHTML = `<span class="pill off">Sin conexión</span><button class="btn" id="gConnect">Conectar con Google Drive</button>`;
+  const o = $('#gset'); if (o && !Drive.cid()) o.open = true; }
+document.addEventListener('click', async e => { if (e.target.id === 'gConnect') await connect(false); if (e.target.id === 'gSwitch') await connect(true); });
+async function connect(force) {
+  try { await Drive.session(!!force || !Drive.token); const u = await Drive.about(); S.email = u.emailAddress; S.cfg.email = u.emailAddress;
+    const rootName = (S.cfg.rootName || 'Soportes_Facturas').trim(); let root = null;
+    if (S.cfg.rootId && !force) { try { const f = await Drive.get(S.cfg.rootId); if (f && !f.trashed && f.mimeType === FOLDER_MIME) root = {id: f.id, name: f.name}; } catch (e) { if (e.status !== 404 && e.status !== 403) throw e; } }
+    if (!root) { const found = await Drive.find(rootName, null, true);
+      if (found.length) { root = {id: found[0].id, name: found[0].name}; if (found.length > 1) log(`Hay ${found.length} carpetas llamadas «${rootName}» visibles para esta cuenta; se usa la más antigua. Revisa y elimina duplicados en Drive.`, 'w'); }
+      else { if (!confirm(`No encontré una carpeta «${rootName}» visible para ${S.email}.\n\n¿Crearla ahora en «Mi unidad» con sus subcarpetas «En proceso» y «_Control»?\n\n(Si ya existe y no la ves, cancela: puede ser otra cuenta de Google o falta el permiso de acceso completo.)`)) { log('Conexión cancelada: no se creó la carpeta.', 'w'); renderFolder(); return; }
+        root = await Drive.createFolder(rootName, null); log(`Carpeta «${rootName}» creada en Drive.`, 'o'); } }
+    S.root = {id: root.id, name: root.name}; S.enProceso = await Drive.sub(root.id, 'En proceso'); S.ctrl = await Drive.sub(root.id, '_Control');
+    S.cfg.rootId = root.id; S.cfg.rootName = root.name; saveCfg(); $('#cfgRoot').value = S.cfg.rootName;
+    await loadShared(); rebuildIndex(); renderVendors(); renderFolder(); log(`Conectado a Drive como ${S.email}: carpeta «${root.name}» lista (En proceso y _Control verificadas).`, 'o'); await refreshSupports(); updateCounters();
+  } catch (e) { log('No se pudo conectar con Drive: ' + e.message, 'e'); renderFolder(); } }
+async function loadShared() {
+  const v = await Drive.readJSON(S.ctrl.id, 'vendors.json'); if (v && Array.isArray(v.vendors)) { S.vendors = {vendors: v.vendors}; if (v.ignore != null) S.ignore = v.ignore; } else { S.vDirty = true; persistVendors(); }
+  const r = await Drive.readJSON(S.ctrl.id, 'registro_soportes.json'); S.registry = Core.mergeRegistry(r && Array.isArray(r.entries) ? r : null, S.registry.entries.length ? S.registry : null); }
+async function refreshRegistry() { if (!S.ctrl) return; const r = await Drive.readJSON(S.ctrl.id, 'registro_soportes.json'); S.registry = Core.mergeRegistry(r, S.registry); }
+
+$('#cfgClient').onchange = e => { S.cfg.clientId = e.target.value.trim(); Drive.token = null; saveCfg(); renderFolder(); };
+$('#cfgRoot').onchange = e => { const v = e.target.value.trim() || 'Soportes_Facturas'; if (v !== S.cfg.rootName) { S.cfg.rootName = v; S.cfg.rootId = null; S.root = S.enProceso = S.ctrl = null; saveCfg(); renderFolder(); refreshSupports(); } };
+$('#cfgOp').onchange = e => { S.cfg.operator = e.target.value.trim(); saveCfg(); };
+$('#cfgFull').onchange = e => { S.cfg.fullScope = e.target.checked; Drive.token = null; S.cfg.rootId = null; S.root = S.enProceso = S.ctrl = null; saveCfg(); renderFolder(); log('Cambió el tipo de acceso: vuelve a conectar con Google.', 'w'); };
+/* ---------- diagnóstico ---------- */
+$('#gDiag').onclick = async () => { const out = $('#diagOut'); out.textContent = ''; const add = s => { out.textContent += s + '\n'; }; let bad = 0;
+  const step = async (n, fn) => { try { const r = await fn(); add('✔ ' + n + (r ? ' — ' + r : '')); return true; } catch (e) { bad++; add('✘ ' + n + ': ' + e.message); return false; } };
+  const tmp = [];
+  if (!await step('1. Autorización de Google', async () => { await Drive.session(true); return 'token obtenido (' + (S.cfg.fullScope ? 'acceso completo' : 'drive.file') + ')'; })) return;
+  if (!await step('2. Cuenta', async () => { const u = await Drive.about(); S.email = u.emailAddress; return u.emailAddress; })) return;
+  if (!S.root) { add('✘ 3. Aún no hay carpeta raíz: pulsa «Conectar con Google Drive» y vuelve a probar.'); return; }
+  add('✔ 3. Carpeta raíz — «' + S.root.name + '»');
+  let t1 = null, t2 = null, fid = null;
+  await step('4. Crear subcarpeta temporal', async () => { t1 = await Drive.createFolder('_prueba_' + Date.now(), S.root.id); t2 = await Drive.createFolder('_prueba_dest_' + Date.now(), S.root.id); tmp.push(t1.id, t2.id); });
+  if (t1) { const payload = 'prueba ' + new Date().toISOString();
+    await step('5. Subir archivo', async () => { const f = await Drive.upload(t1.id, 'prueba.txt', new Blob([payload]), 'text/plain'); fid = f.id; tmp.push(fid); if (+f.size !== payload.length) throw new Error('tamaño distinto'); return f.size + ' bytes'; });
+    if (fid) { await step('6. Leer y comparar contenido', async () => { const t = new TextDecoder().decode(await Drive.read(fid)); if (t !== payload) throw new Error('el contenido leído no coincide'); });
+      await step('7. Mover y renombrar entre carpetas', async () => { await Drive.move(fid, t1.id, t2.id, 'prueba_movida.txt'); const l = await Drive.list(t2.id); if (!l.some(x => x.name === 'prueba_movida.txt')) throw new Error('no apareció en destino'); const l1 = await Drive.list(t1.id); if (l1.length) throw new Error('quedó copia en origen'); }); } }
+  await step('8. Limpiar (enviar a papelera)', async () => { for (const id of tmp.slice().reverse()) await Drive.trash(id); });
+  await step('9. Archivos visibles en «En proceso»', async () => { const l = await Drive.list(S.enProceso.id); return l.length + ' archivo(s). Si la otra persona ya subió y aquí ves 0, activa «Acceso completo a Drive».'; });
+  add(bad ? `\nResultado: ${bad} paso(s) con error. No uses la herramienta hasta resolverlo.` : '\nResultado: TODO CORRECTO. La conexión con Drive funciona.'); log('Diagnóstico de conexión: ' + (bad ? bad + ' error(es)' : 'correcto'), bad ? 'e' : 'o'); };
+
+
+/* ---------- vendors (UI) ---------- */
+function renderVendors() { $('#ignoreNames').value = S.ignore;
+  $('#vBody').innerHTML = S.vendors.vendors.length ? S.vendors.vendors.map((v, i) => `<tr data-i="${i}"><td><input data-k="name" value="${esc(v.name)}"></td><td><input data-k="aliases" value="${esc((v.aliases || []).join(', '))}"></td><td><button class="lnk vdel">Quitar</button></td></tr>`).join('') : '<tr><td colspan="3" class="empty">Aún no hay vendors. Se agregan solos al guardar soportes, o pega la lista de QBO.</td></tr>'; }
+$('#vBody').addEventListener('input', e => { const tr = e.target.closest('tr'); if (!tr || tr.dataset.i == null) return; const v = S.vendors.vendors[+tr.dataset.i]; if (e.target.dataset.k === 'name') v.name = e.target.value; else v.aliases = e.target.value.split(',').map(s => s.trim()).filter(Boolean); rebuildIndex(); persistVendors(); });
+$('#vBody').addEventListener('click', e => { if (!e.target.classList.contains('vdel')) return; const i = +e.target.closest('tr').dataset.i; S.vendors.vendors.splice(i, 1); rebuildIndex(); persistVendors(); renderVendors(); });
+$('#vAdd').onclick = () => { S.vendors.vendors.push({name: '', aliases: []}); renderVendors(); $$('#vBody input[data-k=name]').pop().focus(); };
+$('#vPasteBtn').onclick = () => { $('#vPasteBox').hidden = !$('#vPasteBox').hidden; };
+$('#vPasteOk').onclick = () => { let n = 0; $('#vPaste').value.split(/\r?\n/).map(s => s.trim()).filter(Boolean).forEach(l => { const before = S.vendors.vendors.length; addVendorIfNew(l); if (S.vendors.vendors.length > before) n++; }); rebuildIndex(); persistVendors(); renderVendors(); $('#vPaste').value = ''; log(`Vendors agregados desde la lista pegada: ${n}.`, 'o'); };
+$('#ignoreNames').oninput = e => { S.ignore = e.target.value; persistVendors(); };
+$('#vExport').onclick = () => { const a = document.createElement('a'); a.href = URL.createObjectURL(new Blob([JSON.stringify({vendors: S.vendors.vendors, ignore: S.ignore}, null, 2)], {type: 'application/json'})); a.download = 'vendors_aristotle.json'; a.click(); };
+$('#vImport').onchange = async e => { const f = e.target.files[0]; if (!f) return; try { const j = JSON.parse(await f.text()); if (!Array.isArray(j.vendors)) throw new Error('El JSON no tiene la lista «vendors»'); S.vendors = {vendors: j.vendors}; if (j.ignore != null) S.ignore = j.ignore; rebuildIndex(); persistVendors(); renderVendors(); log('Tabla de vendors importada.', 'o'); } catch (err) { log('Importación inválida: ' + err.message, 'e'); } e.target.value = ''; };
+
+/* =====================================================================
+   TAB 1 · PROCESAR
+   ===================================================================== */
+let uid = 0;
+async function pdfLines(buf) {
+  const pdf = await pdfjsLib.getDocument({data: new Uint8Array(buf.slice(0))}).promise; const pages = Math.min(pdf.numPages, 8); const lines = [];
+  for (let p = 1; p <= pages; p++) { const tc = await (await pdf.getPage(p)).getTextContent();
+    const items = tc.items.filter(i => i.str && i.str.trim() !== '').map(i => ({s: i.str, x: i.transform[4], y: i.transform[5], w: i.width || 0})); items.sort((a, b) => b.y - a.y || a.x - b.x);
+    const rows = []; let cur = null; for (const it of items) { if (cur && Math.abs(cur.y - it.y) <= 3) cur.items.push(it); else { cur = {y: it.y, items: [it]}; rows.push(cur); } }
+    for (const r of rows) { r.items.sort((a, b) => a.x - b.x); let txt = '', last = null; for (const it of r.items) { if (last !== null) { const gap = it.x - last; txt += gap > 12 ? '   ' : (gap > 1.5 ? ' ' : ''); } txt += it.s; last = it.x + it.w; } lines.push(txt.trim()); } }
+  return {lines, numPages: pdf.numPages}; }
+
+function newItem(o) { return Object.assign({id: ++uid, status: 'pendiente', selected: false, notes: [], source: null, ed: {vendor: '', date: '', amt: ''}, conf: 'baja', alts: [], reason: ''}, o); }
+async function buildItem(file, source) {
+  const buf = await file.arrayBuffer(); const ext = extOf(file.name); const it = newItem({name: file.name, file, buf, ext: ext === '.jpeg' ? '.jpg' : ext, kind: ext === '.pdf' ? 'pdf' : 'image', source});
+  it.hash = await sha256(buf);
+  if (it.hash) { const dupReg = S.registry.entries.find(e => e.hash === it.hash); const dupList = S.items.find(x => x.hash === it.hash);
+    if (dupReg) { it.status = 'duplicado'; it.reason = 'Ya guardado antes como «' + dupReg.savedName + '» (' + (dupReg.folder || '') + ')'; } else if (dupList) { it.status = 'duplicado'; it.reason = 'Mismo archivo que otro de esta lista («' + dupList.name + '»)'; } }
+  if (it.kind === 'pdf') { try { const {lines, numPages} = await pdfLines(buf); it.lines = lines; it.numPages = numPages; const txt = lines.join(' ').replace(/\s+/g, '');
+      if (txt.length < 25) { it.notes.push('PDF sin texto legible (escaneo o imagen): captura los datos mirando la vista previa'); it.conf = 'baja'; }
+      else { const ex = Core.extractFields(lines, {vIndex: S.vIndex, ignoreKeys: ignoreKeys()}); it.ex = ex; it.conf = ex.conf; it.notes.push(...ex.notes); if (numPages > 8) it.notes.push('PDF de ' + numPages + ' páginas: solo se leyeron las primeras 8');
+        it.ed.vendor = ex.vendor.name || ''; it.ed.date = ex.date.iso ? Core.fmtUS(ex.date.iso) : ''; it.ed.amt = ex.amount.cents != null ? (ex.amount.cents / 100).toFixed(2) : ''; it.alts = ex.amount.alts || []; } }
+    catch (e) { it.notes.push('No pude leer el PDF (' + (e.message || e) + '). ¿Está protegido con contraseña? Captura manual'); it.conf = 'baja'; } }
+  else it.notes.push('Imagen: no se lee automáticamente; captura vendor, fecha y monto mirando la vista previa');
+  if (source && source.hint) it.notes.push('Correo: ' + source.hint);
+  it.selected = it.status === 'pendiente' && it.conf === 'alta' && itemValid(it) && !dupHint(it); return it; }
+
+async function addFiles(files) {
+  const st = $('#procStatus'); let n = 0; const list = [...files];
+  for (const f of list) { st.textContent = `Procesando ${++n} de ${list.length}: ${f.name}`; const ext = extOf(f.name);
+    try {
+      if (ext === '.eml') { const m = Core.parseEml(await f.arrayBuffer()); let usable = 0, skipped = 0;
+        const hint = [m.subject && ('«' + m.subject + '»'), m.from && ('de ' + m.from), m.nested[0] && m.nested[0].from && ('reenviado, original de ' + m.nested[0].from)].filter(Boolean).join(' ');
+        for (const a of m.atts) { const ae = extOf(a.name) || (a.type === 'application/pdf' ? '.pdf' : ''); const isPdf = ae === '.pdf' || a.type === 'application/pdf'; const isImg = IMG_EXT.includes(ae) || a.type.startsWith('image/');
+          if (!isPdf && !isImg) { skipped++; continue; } if (isImg && (a.inline || a.bytes.length < 8192)) { skipped++; continue; }
+          const name = /\.[a-z0-9]+$/i.test(a.name) ? a.name : a.name + (isPdf ? '.pdf' : '.png'); const file = new File([a.bytes], name, {type: isPdf ? 'application/pdf' : a.type});
+          S.items.push(await buildItem(file, {email: f.name, hint})); usable++; }
+        m.errors.forEach(e => log(f.name + ': ' + e, 'w'));
+        log(`Correo «${f.name}»: ${usable} adjunto(s) utilizable(s)` + (skipped ? `, ${skipped} ignorado(s) (logos, firmas u otros tipos)` : '') + '.', usable ? '' : 'w');
+        if (!usable) log(`«${f.name}» no trae PDF ni imágenes utilizables (¿la factura viene solo en el cuerpo del correo?). Guárdala como PDF e inclúyela.`, 'w'); }
+      else if (ext === '.pdf' || IMG_EXT.includes(ext)) S.items.push(await buildItem(f, null));
+      else log(`«${f.name}»: tipo de archivo no soportado (usa PDF, imagen o .eml).`, 'w');
+    } catch (e) { log(`Error con «${f.name}»: ${e.message}`, 'e'); } }
+  st.textContent = ''; renderItems(); }
+
+function itemCents(it) { return Core.parseMoney(it.ed.amt); }
+function itemIso(it) { return Core.parseUSDate(it.ed.date); }
+function itemVendor(it) { return Core.sanitizeVendor(Core.canonVendor(it.ed.vendor, S.vIndex)); }
+function itemValid(it) { const c = itemCents(it); return !!(itemVendor(it) && itemIso(it) && c != null && c > 0); }
+function finalName(it) { if (!itemValid(it)) return '<span class="src">— completa los campos —</span>'; return esc(Core.buildName(itemVendor(it), itemIso(it), itemCents(it), it.ext)); }
+function dupHint(it) { const v = itemVendor(it), iso = itemIso(it), c = itemCents(it); if (!v || !iso || c == null) return ''; const k = Core.normName(v);
+  const other = S.items.find(x => x.id !== it.id && x.status !== 'duplicado' && x.status !== 'error' && itemVendor(x) && Core.normName(itemVendor(x)) === k && itemIso(x) === iso && itemCents(x) === c);
+  if (other) return 'Mismo vendor, fecha y monto que «' + other.name + '»';
+  const reg = S.registry.entries.find(e => Core.normName(e.vendor) === k && e.date === iso && Math.round(e.amount * 100) === c); return reg ? 'Ya existe «' + reg.savedName + '» (' + reg.folder + ') con el mismo vendor, fecha y monto' : ''; }
+function statusHtml(it) { if (it.status === 'guardado') return `<span class="badge CONCILIADO">Guardado</span><div class="src">${esc(it.savedAs)}</div>`; if (it.status === 'duplicado') return `<span class="badge baja">Duplicado</span><div class="src">${esc(it.reason)}</div>`; if (it.status === 'error') return `<span class="badge baja">Error</span><div class="src">${esc(it.reason)}</div>`; const dh = dupHint(it); return (itemValid(it) ? '<span class="badge YA">Listo</span>' : '<span class="badge media">Falta dato</span>') + (dh ? `<div class="note">⚠ ${esc(dh)}: ¿duplicado? Si es otra factura, marca ✓ para guardarla (llevará sufijo _2)</div>` : ''); }
+function rowHtml(it) { const off = it.status !== 'pendiente'; const v = it.ed;
+  return `<tr data-id="${it.id}" class="st-${it.status}${it.id === S.sel ? ' sel' : ''}"><td><input type="checkbox" class="chk" ${it.selected ? 'checked' : ''} ${off ? 'disabled' : ''}></td>
+  <td class="fn"><a href="#" class="view">${esc(it.name)}</a><div class="src">${esc(it.source ? 'Correo: ' + it.source.email : 'Archivo directo')}</div>${it.notes.map(n => `<div class="note">• ${esc(n)}</div>`).join('')}</td>
+  <td><input data-f="vendor" list="dlVendors" value="${esc(v.vendor)}" ${off ? 'disabled' : ''}></td>
+  <td><input class="dt" data-f="date" placeholder="MM/DD/AAAA" value="${esc(v.date)}" ${off ? 'disabled' : ''}></td>
+  <td><input class="amt" data-f="amt" list="dlA${it.id}" value="${esc(v.amt)}" ${off ? 'disabled' : ''}><datalist id="dlA${it.id}">${(it.alts || []).map(c => `<option value="${(c / 100).toFixed(2)}">`).join('')}</datalist></td>
+  <td><span class="badge ${it.conf}">${{alta: 'Alta', media: 'Media', baja: 'Baja'}[it.conf]}</span></td><td class="final">${finalName(it)}</td><td class="stt">${statusHtml(it)}</td></tr>`; }
+function renderItems() { const tb = $('#itemsBody'); tb.innerHTML = S.items.length ? S.items.map(rowHtml).join('') : '<tr><td colspan="8" class="empty">Sin archivos. Arrastra PDF, imágenes o correos (.eml) arriba.</td></tr>'; $$('#itemsBody tr[data-id]').forEach(tr => validateRowInputs(tr)); updateCounters(); }
+function validateRowInputs(tr) { const it = S.items.find(x => x.id === +tr.dataset.id); if (!it || it.status !== 'pendiente') return;
+  tr.querySelector('[data-f=vendor]').classList.toggle('invalid', !itemVendor(it)); tr.querySelector('[data-f=date]').classList.toggle('invalid', !itemIso(it)); const c = itemCents(it); tr.querySelector('[data-f=amt]').classList.toggle('invalid', !(c != null && c > 0)); }
+function updateCounters() { const pend = S.items.filter(i => i.status === 'pendiente'), sel = pend.filter(i => i.selected), ok = sel.filter(itemValid), saved = S.items.filter(i => i.status === 'guardado').length;
+  $('#counters').textContent = `${S.items.length} en lista · ${sel.length} seleccionados (${ok.length} válidos) · ${saved} guardados`; $('#btnSave').disabled = !S.root || !ok.length; $('#btnSave').title = S.root ? '' : 'Conecta primero la carpeta del Drive'; }
+$('#itemsBody').addEventListener('input', e => { const tr = e.target.closest('tr'); if (!tr || !e.target.dataset.f) return; const it = S.items.find(x => x.id === +tr.dataset.id); it.ed[e.target.dataset.f] = e.target.value; tr.querySelector('.final').innerHTML = finalName(it); tr.querySelector('.stt').innerHTML = statusHtml(it); validateRowInputs(tr); updateCounters(); });
+$('#itemsBody').addEventListener('change', e => { if (!e.target.classList.contains('chk')) return; const it = S.items.find(x => x.id === +e.target.closest('tr').dataset.id); it.selected = e.target.checked; updateCounters(); });
+$('#itemsBody').addEventListener('click', e => { const a = e.target.closest('a.view'); if (!a) return; e.preventDefault(); const it = S.items.find(x => x.id === +a.closest('tr').dataset.id); S.sel = it.id; $$('#itemsBody tr').forEach(r => r.classList.toggle('sel', +r.dataset.id === it.id)); showPreview(it); });
+async function showPreview(it) { const b = $('#pvBody'); b.innerHTML = '<div class="src">Cargando…</div>';
+  try { if (it.kind === 'pdf') { const pdf = await pdfjsLib.getDocument({data: new Uint8Array(it.buf.slice(0))}).promise; const page = await pdf.getPage(1); const vp = page.getViewport({scale: 1.4}); const c = document.createElement('canvas'); c.width = vp.width; c.height = vp.height; await page.render({canvasContext: c.getContext('2d'), viewport: vp}).promise; b.innerHTML = ''; b.appendChild(c); if (pdf.numPages > 1) b.insertAdjacentHTML('beforeend', `<div class="src">Página 1 de ${pdf.numPages}</div>`); }
+    else { b.innerHTML = `<img alt="vista previa" src="${URL.createObjectURL(new Blob([it.buf], {type: it.file.type || 'image/png'}))}">`; } } catch (e) { b.innerHTML = '<div class="alert err">No pude mostrar la vista previa: ' + esc(e.message) + '</div>'; } }
+$('#btnSelOk').onclick = () => { S.items.forEach(i => { if (i.status === 'pendiente') i.selected = i.conf === 'alta' && itemValid(i) && !dupHint(i); }); renderItems(); };
+$('#btnClean').onclick = () => { S.items = S.items.filter(i => i.status !== 'guardado'); renderItems(); };
+
+$('#btnSave').onclick = async () => {
+  if (!S.root) return; const todo = S.items.filter(i => i.status === 'pendiente' && i.selected && itemValid(i)); if (!todo.length) return; $('#btnSave').disabled = true;
+  try { await Drive.session(); const existing = new Set((await Drive.list(S.enProceso.id)).map(f => f.name.toLowerCase())); let ok = 0;
+    for (const it of todo) { try { const vendor = itemVendor(it), iso = itemIso(it), cents = itemCents(it); let name = Core.buildName(vendor, iso, cents, it.ext); let k = 1;
+        while (existing.has(name.toLowerCase())) { k++; name = Core.buildName(vendor, iso, cents, '').concat('_' + k, it.ext); }
+        const mime = it.file.type || 'application/octet-stream'; const up = await Drive.upload(S.enProceso.id, name, new Blob([it.buf], {type: mime}), mime);
+        if (+up.size !== it.buf.byteLength) { try { await Drive.trash(up.id); } catch (e2) {} throw new Error('El tamaño guardado en Drive no coincide con el original'); } existing.add(name.toLowerCase());
+        const raw = it.ed.vendor.trim(); addVendorIfNew(vendor, raw);
+        S.registry.entries.push({hash: it.hash, originalName: it.name, savedName: name, vendor, date: iso, amount: cents / 100, source: it.source ? it.source.email : null, confidence: it.conf, edited: !!(it.ex && (Core.canonVendor(it.ed.vendor, S.vIndex) !== it.ex.vendor.name || Core.parseUSDate(it.ed.date) !== it.ex.date.iso || itemCents(it) !== it.ex.amount.cents)), savedAt: new Date().toISOString(), savedBy: S.cfg.operator || null, driveId: up.id, folder: 'En proceso', status: 'En proceso'});
+        it.status = 'guardado'; it.savedAs = name; it.selected = false; ok++; log(`Guardado: ${it.name}  →  En proceso/${name}`, 'o'); }
+      catch (e) { it.status = 'error'; it.reason = e.message; log(`No se pudo guardar «${it.name}»: ${e.message}`, 'e'); } }
+    rebuildIndex(); persistVendors(); renderVendors(); if (ok && !await saveRegistry()) log('ATENCIÓN: archivos guardados pero el registro no se pudo escribir en Drive. Pulsa «Releer carpeta» más tarde para reintentar.', 'e'); await refreshSupports(); log(`Resultado: ${ok} de ${todo.length} guardados en «En proceso».`, ok === todo.length ? 'o' : 'w'); }
+  catch (e) { log('Error al guardar: ' + e.message, 'e'); } renderItems(); };
+
+const drop = $('#drop'), fileIn = $('#fileIn');
+drop.addEventListener('click', () => fileIn.click()); fileIn.addEventListener('change', () => { addFiles(fileIn.files); fileIn.value = ''; });
+['dragenter', 'dragover'].forEach(ev => drop.addEventListener(ev, e => { e.preventDefault(); drop.classList.add('over'); })); ['dragleave', 'drop'].forEach(ev => drop.addEventListener(ev, e => { e.preventDefault(); drop.classList.remove('over'); }));
+drop.addEventListener('drop', e => addFiles(e.dataTransfer.files));
+
+/* =====================================================================
+   TAB 2 · CONCILIAR
+   ===================================================================== */
+async function refreshSupports() {
+  S.supports = []; S.nonStd = []; if (!S.root) { $('#concSupports').textContent = 'Conecta con Google Drive para ver los soportes.'; return; }
+  try { const allowed = ['.pdf', ...IMG_EXT]; const load = async (dirId, folder, locked) => { for (const f of await Drive.list(dirId)) { if (f.kind !== 'file' || !allowed.includes(extOf(f.name))) continue; const p = Core.parseName(f.name);
+      if (!p) { S.nonStd.push({name: f.name, folder}); continue; } S.supports.push({id: folder + '/' + f.name, name: f.name, folder, locked, vendor: p.vendor, iso: p.iso, cents: p.cents, fid: f.id, dirId}); } };
+    await load(S.enProceso.id, 'En proceso', false);
+    for (const d of await Drive.list(S.root.id)) if (d.kind === 'directory' && /^Conciliados \d{2}-\d{4}$/.test(d.name)) await load(d.id, d.name, true); }
+  catch (e) { log('No pude leer la carpeta de Drive: ' + e.message, 'e'); $('#concSupports').innerHTML = `<div class="alert err">No pude leer Drive: ${esc(e.message)}</div>`; return; }
+  S.supports.sort((a, b) => (a.folder < b.folder ? -1 : a.folder > b.folder ? 1 : 0) || (a.name < b.name ? -1 : a.name > b.name ? 1 : 0));
+  const en = S.supports.filter(s => !s.locked).length, lk = S.supports.length - en;
+  $('#concSupports').innerHTML = `<b>${en}</b> soporte(s) en «En proceso» · <b>${lk}</b> ya conciliado(s) en carpetas «Conciliados MM-AAAA»` + (S.nonStd.length ? `<div class="alert warn">${S.nonStd.length} archivo(s) no siguen el formato <code>Vendor_MM-DD-AAAA_monto.ext</code> y se excluyen de la conciliación: ${S.nonStd.slice(0, 8).map(x => esc(x.folder + '/' + x.name)).join('; ')}${S.nonStd.length > 8 ? '…' : ''}</div>` : ''); }
+$('#btnRescan').onclick = async () => { try { await Drive.session(); await flushVendors(); await refreshRegistry(); } catch (e) { log('No pude sincronizar con Drive: ' + e.message, 'e'); } await refreshSupports(); log('Carpeta de Drive releída.'); };
+
+$('#xlsIn').onchange = async e => { const f = e.target.files[0]; e.target.value = ''; if (!f) return; $('#xlsName').textContent = f.name;
+  try { if (typeof XLSX === 'undefined') throw new Error('No se cargó la librería de Excel (se requiere internet la primera vez)'); const wb = XLSX.read(await f.arrayBuffer(), {type: 'array'}); let pick = null;
+    for (const sn of wb.SheetNames) { const rows = XLSX.utils.sheet_to_json(wb.Sheets[sn], {header: 1, raw: true, defval: null}); if (!rows.length) continue; const h = Core.findHeader(rows); if (h.complete) { pick = {sn, rows, h}; break; } if (!pick) pick = {sn, rows, h}; }
+    if (!pick) throw new Error('El archivo no tiene datos');
+    S.qbo = {fileName: f.name, sheet: pick.sn, rows: pick.rows, hdrRow: pick.h.row, map: pick.h.map, complete: pick.h.complete, include: null}; S.result = null; parseQbo(); renderQbo(); $('#resultPanel').innerHTML = '';
+    log(`Excel «${f.name}» leído (hoja «${pick.sn}», encabezado en fila ${pick.h.row + 1}).`, 'o'); }
+  catch (err) { S.qbo = null; $('#xlsPanel').innerHTML = `<div class="alert err">No pude leer el archivo: ${esc(err.message)}</div>`; log('Error leyendo Excel: ' + err.message, 'e'); } };
+
+function parseQbo() { const q = S.qbo; q.err = null; const miss = ['date', 'vendor', 'amount'].filter(f => q.map[f] == null); if (miss.length) { q.err = 'Faltan columnas obligatorias: ' + miss.map(m => ({date: 'Fecha', vendor: 'Vendor/Name', amount: 'Monto'}[m])).join(', ') + '. Asígnalas manualmente abajo.'; q.txns = []; q.types = {}; return; }
+  const r = Core.parseTxns(q.rows, q.hdrRow, q.map); q.all = r.txns; q.ignored = r.ignored; q.types = {}; r.txns.forEach(t => { const k = t.typeNorm || '(sin tipo)'; (q.types[k] = q.types[k] || {n: 0, c: 0, label: t.type || '(sin tipo)'}); q.types[k].n++; q.types[k].c += t.cents; });
+  if (!q.include) { q.include = new Set(Object.keys(q.types).filter(k => q.map.type == null || Core.INCLUDE_DEFAULT.test(k) || k === '(sin tipo)')); if (q.map.type != null && ![...q.include].length) q.include = new Set(Object.keys(q.types)); }
+  const seen = new Map(); let dups = 0; r.txns.forEach(t => { if (!t.num) return; const k = [t.iso, t.typeNorm, t.num, t.vendor, t.cents].join('|'); if (seen.has(k)) dups++; else seen.set(k, 1); }); q.dupRows = dups;
+  const g = new Map(); r.txns.forEach(t => { if (!t.num) return; const k = [t.iso, t.typeNorm, t.num, t.vendor].join('|'); g.set(k, (g.get(k) || 0) + 1); }); q.multiLine = [...g.values()].filter(n => n > 1).length; }
+function renderQbo() { const q = S.qbo; const hdr = q.rows[q.hdrRow] || []; const F = [['date', 'Fecha *'], ['type', 'Tipo de transacción'], ['num', 'Número'], ['vendor', 'Vendor / Name *'], ['amount', 'Monto *'], ['memo', 'Memo']];
+  let h = `<div class="alert ${q.complete && !q.err ? 'ok' : 'warn'}">Hoja «${esc(q.sheet)}», encabezados en la fila ${q.hdrRow + 1}. Verifica que las columnas detectadas sean las correctas (* obligatorias).</div><div class="map">` + F.map(([k, lbl]) => `<div><label>${lbl}</label><select data-map="${k}"><option value="">— no usar —</option>${hdr.map((c, i) => `<option value="${i}" ${q.map[k] === i ? 'selected' : ''}>${esc(String(c ?? '(vacío)'))} (col ${i + 1})</option>`).join('')}</select></div>`).join('') + '</div>';
+  if (q.err) { h += `<div class="alert err">${esc(q.err)}</div>`; $('#xlsPanel').innerHTML = h; return; }
+  h += `<h3>Tipos de transacción a conciliar</h3><div class="types">` + Object.entries(q.types).sort().map(([k, v]) => `<label><input type="checkbox" data-type="${esc(k)}" ${q.include.has(k) ? 'checked' : ''}> ${esc(v.label)} (${v.n} · ${Core.money(v.c)})</label>`).join('') + `</div><small class="mute">Por defecto: Bill, Expense, Check y Credit Card Expense. Los pagos (Bill Payment, Credit Card Payment) no llevan factura y quedan excluidos.</small>`;
+  if (q.ignored) h += `<div class="alert info">${q.ignored} fila(s) sin fecha o monto válidos (títulos, subtotales, totales) se ignoraron.</div>`;
+  if (q.dupRows) h += `<div class="alert warn">${q.dupRows} fila(s) idénticas (misma fecha, tipo, número, vendor y monto): posible exportación duplicada. Se conservan; revísalas.</div>`;
+  if (q.multiLine) h += `<div class="alert warn">${q.multiLine} transacción(es) aparecen en varias filas con el mismo número (posibles líneas de split). Si el reporte es detallado por línea, activa «Consolidar».</div>`;
+  h += `<div class="row" style="margin-top:10px"><label>Tolerancia de fecha (± días) <input type="text" id="tolIn" value="${S.tol}" style="width:60px"></label><label><input type="checkbox" id="consIn" ${S.consolidate ? 'checked' : ''}> Consolidar líneas con el mismo número</label><button class="btn" id="btnRun">Conciliar</button></div>`;
+  $('#xlsPanel').innerHTML = h; }
+$('#xlsPanel').addEventListener('change', e => { const q = S.qbo; if (!q) return;
+  if (e.target.dataset.map) { const v = e.target.value; q.map[e.target.dataset.map] = v === '' ? undefined : +v; if (v === '') delete q.map[e.target.dataset.map]; q.include = null; q.complete = ['date', 'vendor', 'amount'].every(f => q.map[f] != null); parseQbo(); renderQbo(); }
+  else if (e.target.dataset.type != null) { e.target.checked ? q.include.add(e.target.dataset.type) : q.include.delete(e.target.dataset.type); }
+  else if (e.target.id === 'consIn') S.consolidate = e.target.checked; else if (e.target.id === 'tolIn') { const n = parseInt(e.target.value, 10); S.tol = Number.isFinite(n) && n >= 0 && n <= 30 ? n : 5; e.target.value = S.tol; } });
+$('#xlsPanel').addEventListener('click', e => { if (e.target.id === 'btnRun') runReconcile(); });
+
+async function runReconcile() {
+  const q = S.qbo; if (!q || q.err) return; if (!S.root) { $('#resultPanel').innerHTML = '<div class="alert err">Conecta primero con Google Drive (botón arriba a la derecha).</div>'; return; }
+  try { await Drive.session(); await refreshRegistry(); } catch (e) { $('#resultPanel').innerHTML = `<div class="alert err">No pude leer Drive: ${esc(e.message)}</div>`; return; }
+  await refreshSupports(); let tx = q.all.filter(t => q.include.has(t.typeNorm || '(sin tipo)')).map(t => ({...t}));
+  if (!tx.length) { $('#resultPanel').innerHTML = '<div class="alert err">No hay transacciones de los tipos seleccionados.</div>'; return; }
+  if (S.consolidate) tx = Core.consolidate(tx, S.vIndex);
+  const prior = new Map(); S.registry.entries.forEach(en => { if (en.qbo && en.qbo.sig) prior.set(en.folder + '/' + en.savedName, en.qbo.sig); });
+  const supports = S.supports.map(s => ({...s})); const res = Core.reconcile(tx, supports, {tolDays: S.tol, reviewWindow: 45, vIndex: S.vIndex, prior});
+  res.pairs.forEach(p => { p.accept = p.status === 'CONCILIADO' && !p.s.locked; }); S.result = {res, tx, sum: Core.summarize(res, tx), tol: S.tol, ran: new Date()}; S.view = 'CONCILIADO'; renderResult();
+  log(`Conciliación: ${tx.length} transacciones vs ${supports.length} soportes → conciliadas ${S.result.sum.conc.n}, por revisar ${S.result.sum.rev.n}, pendientes ${S.result.sum.pend.n}, soportes sin transacción ${S.result.sum.sin.n}.`, S.result.sum.control ? 'o' : 'e'); }
+
+const LBL = {CONCILIADO: 'Conciliado', FECHA_FUERA: 'Fecha fuera de tolerancia', MONTO_DIF: 'Monto diferente', VENDOR_DIF: 'Vendor distinto', PENDIENTE: 'Pendiente de recibir', SIN_TXN: 'Soporte sin transacción'};
+function renderResult() { const R = S.result, s = R.sum, m = Core.money; const kp = (cls, n, t, c) => `<div class="kpi ${cls}"><div class="n">${n}</div><div class="t">${t}</div><div class="m">${c != null ? 'USD ' + m(c) : ''}</div></div>`;
+  const toMove = R.res.pairs.filter(p => p.accept && !p.s.locked).length;
+  let h = `<div class="card"><h2>Resultado de la conciliación</h2><div class="cards">${kp('info', s.total.n, 'Transacciones QBO analizadas', s.total.c)}${kp('ok', s.conc.n, 'Conciliadas' + (s.conc.prev ? ` (${s.conc.prev} de corridas previas)` : ''), s.conc.c)}${kp('warn', s.rev.n, 'Por revisar (coinciden parcialmente)', s.rev.c)}${kp('bad', s.pend.n, 'Pendientes de recibir', s.pend.c)}${kp('bad', s.sin.n, 'Soportes sin transacción en QBO', s.sin.c)}</div>
+  <div class="alert ${s.control ? 'ok' : 'err'}">Control de suma: QBO ${m(s.total.c)} = Conciliado ${m(s.conc.c)} + Por revisar ${m(s.rev.c)} + Pendiente ${m(s.pend.c)} → ${s.control ? 'CUADRA' : 'NO CUADRA (revisar lógica)'}</div>
+  <div class="row"><button class="btn" id="btnMove" ${toMove ? '' : 'disabled'}>Mover ${toMove} soporte(s) a «Conciliados»</button><button class="btn sec" id="btnXls">Descargar reporte Excel</button><button class="btn sec" id="btnCopyPend">Copiar lista de pendientes</button><span class="src">Tolerancia de fecha: ±${R.tol} días · Solo se mueven los «Conciliado» y los «Por revisar» que marques con ✓.</span></div>
+  <div class="sub-tabs">${[['CONCILIADO', 'Conciliados', s.conc.n], ['REVISAR', 'Por revisar', s.rev.n], ['PENDIENTE', 'Pendientes de recibir', s.pend.n], ['PEND_VENDOR', 'Pendientes por vendor', ''], ['SIN_TXN', 'Soportes sin transacción', s.sin.n]].map(([k, l, n]) => `<button data-view="${k}" class="${S.view === k ? 'on' : ''}">${l}${n !== '' ? ' (' + n + ')' : ''}</button>`).join('')}</div><div id="resTable"></div></div>`;
+  $('#resultPanel').innerHTML = h; renderResTable(); }
+function pairRow(p, withChk) { const t = p.t, sp = p.s; return `<tr data-t="${esc(t.id)}"><td>${withChk ? `<input type="checkbox" class="acc" ${p.accept ? 'checked' : ''}>` : ''}</td><td><span class="badge ${p.s.locked ? 'YA' : p.status}">${p.s.locked ? 'Ya conciliado' : LBL[p.status]}</span></td><td>${Core.fmtUS(t.iso)}</td><td>${esc(t.type)}</td><td>${esc(t.num)}</td><td>${esc(t.vendor)}</td><td class="num">${Core.money(t._abs)}</td><td>${esc(sp.name)}<div class="src">${esc(sp.folder)}</div></td><td class="num">${Core.money(sp._abs)}</td><td class="num">${p.dsd > 0 ? '+' : ''}${p.dsd}</td><td class="num">${p.dc === 0 ? '0.00' : (p.dc > 0 ? '+' : '') + Core.money(p.dc)}</td><td class="src">${esc(p.why)}</td></tr>`; }
+function renderResTable() { const R = S.result.res, v = S.view; let h = '';
+  const pairHead = '<thead><tr><th>✓</th><th>Estado</th><th>Fecha QBO</th><th>Tipo</th><th>Núm</th><th>Vendor QBO</th><th class="num">Monto QBO</th><th>Archivo soporte</th><th class="num">Monto archivo</th><th class="num" title="Fecha del archivo menos fecha en QBO">Δ días (archivo − QBO)</th><th class="num" title="Monto del archivo menos monto en QBO">Δ monto (archivo − QBO)</th><th>Motivo</th></tr></thead>';
+  if (v === 'CONCILIADO') h = `<div class="tblwrap"><table>${pairHead}<tbody>${R.pairs.filter(p => p.status === 'CONCILIADO').map(p => pairRow(p, !p.s.locked)).join('') || '<tr><td colspan="12" class="empty">Sin partidas</td></tr>'}</tbody></table></div>`;
+  else if (v === 'REVISAR') h = `<div class="alert info">Marca ✓ solo las que verificaste y quieres dar por conciliadas; se moverán a «Conciliados» junto con las demás.</div><div class="tblwrap"><table>${pairHead}<tbody>${R.pairs.filter(p => p.status !== 'CONCILIADO').map(p => pairRow(p, true)).join('') || '<tr><td colspan="12" class="empty">Sin partidas</td></tr>'}</tbody></table></div>`;
+  else if (v === 'PENDIENTE') h = `<div class="tblwrap"><table><thead><tr><th>Fecha</th><th>Tipo</th><th>Núm</th><th>Vendor</th><th class="num">Monto USD</th><th>Memo</th><th>Motivo / fila Excel</th></tr></thead><tbody>${R.pend.map(x => `<tr><td>${Core.fmtUS(x.t.iso)}</td><td>${esc(x.t.type)}</td><td>${esc(x.t.num)}</td><td>${esc(x.t.vendor)}</td><td class="num">${Core.money(x.t._abs)}</td><td>${esc(x.t.memo)}</td><td class="src">${esc(x.why)} · fila ${x.t.rowNum}</td></tr>`).join('') || '<tr><td colspan="7" class="empty">No hay pendientes</td></tr>'}</tbody></table></div>`;
+  else if (v === 'PEND_VENDOR') { const g = {}; R.pend.forEach(x => { const k = x.t.vendor || '(sin vendor)'; (g[k] = g[k] || {n: 0, c: 0}); g[k].n++; g[k].c += x.t._abs; });
+    h = `<div class="tblwrap"><table><thead><tr><th>Vendor</th><th class="num">Soportes pendientes</th><th class="num">Monto USD</th></tr></thead><tbody>${Object.entries(g).sort((a, b) => b[1].c - a[1].c).map(([k, x]) => `<tr><td>${esc(k)}</td><td class="num">${x.n}</td><td class="num">${Core.money(x.c)}</td></tr>`).join('') || '<tr><td colspan="3" class="empty">No hay pendientes</td></tr>'}</tbody></table></div>`; }
+  else h = `<div class="tblwrap"><table><thead><tr><th>Archivo</th><th>Carpeta</th><th>Vendor</th><th>Fecha</th><th class="num">Monto USD</th><th>Motivo</th></tr></thead><tbody>${R.sin.map(x => `<tr><td>${esc(x.s.name)}</td><td>${esc(x.s.folder)}</td><td>${esc(x.s.vendor)}</td><td>${Core.fmtUS(x.s.iso)}</td><td class="num">${Core.money(x.s._abs)}</td><td class="src">${esc(x.why)}</td></tr>`).join('') || '<tr><td colspan="6" class="empty">Todos los soportes tienen transacción</td></tr>'}</tbody></table></div>`;
+  $('#resTable').innerHTML = h; }
+$('#resultPanel').addEventListener('click', e => { const b = e.target.closest('[data-view]'); if (b) { S.view = b.dataset.view; $$('#resultPanel [data-view]').forEach(x => x.classList.toggle('on', x === b)); renderResTable(); }
+  if (e.target.id === 'btnMove') moveMatched(); if (e.target.id === 'btnXls') downloadReport(); if (e.target.id === 'btnCopyPend') copyPending(); });
+$('#resultPanel').addEventListener('change', e => { if (!e.target.classList.contains('acc')) return; const id = e.target.closest('tr').dataset.t; const p = S.result.res.pairs.find(x => x.t.id === id); if (p) p.accept = e.target.checked; const n = S.result.res.pairs.filter(x => x.accept && !x.s.locked).length; const bm = $('#btnMove'); bm.disabled = !n; bm.textContent = `Mover ${n} soporte(s) a «Conciliados»`; });
+
+async function copyPending() { const R = S.result.res; const g = {}; R.pend.forEach(x => (g[x.t.vendor || '(sin vendor)'] = g[x.t.vendor || '(sin vendor)'] || []).push(x.t));
+  const txt = 'Soportes pendientes de recibir:\n\n' + Object.entries(g).sort().map(([k, a]) => k + '\n' + a.map(t => `  - ${Core.fmtUS(t.iso)}  ${t.type}${t.num ? ' #' + t.num : ''}  USD ${Core.money(t._abs)}`).join('\n')).join('\n\n');
+  try { await navigator.clipboard.writeText(txt); log('Lista de pendientes copiada al portapapeles.', 'o'); } catch (e) { log('No pude copiar al portapapeles: ' + e.message, 'e'); } }
+
+async function moveMatched() {
+  const R = S.result; const todo = R.res.pairs.filter(p => p.accept && !p.s.locked); if (!todo.length) return; $('#btnMove').disabled = true; let ok = 0, fail = 0;
+  try { await Drive.session(); } catch (e) { log('No se pudo renovar la sesión de Google: ' + e.message, 'e'); $('#btnMove').disabled = false; return; }
+  const dests = new Map();
+  for (const p of todo) { try { const mo = p.t.iso.slice(5, 7), yr = p.t.iso.slice(0, 4); const folder = `Conciliados ${mo}-${yr}`; let d = dests.get(folder);
+      if (!d) { const dir = await Drive.sub(S.root.id, folder); d = {dir, names: new Set((await Drive.list(dir.id)).map(f => f.name.toLowerCase()))}; dests.set(folder, d); }
+      let name = p.s.name; if (d.names.has(name.toLowerCase())) { let k = 2; const base = name.replace(/(\.[A-Za-z0-9]+)$/, ''), ext = extOf(name); while (d.names.has(`${base}_${k}${ext}`.toLowerCase())) k++; name = `${base}_${k}${ext}`; }
+      await Drive.move(p.s.fid, S.enProceso.id, d.dir.id, name !== p.s.name ? name : null); d.names.add(name.toLowerCase()); markMoved(p, folder, name); ok++; log(`Movido: En proceso/${p.s.name}  →  ${folder}/${name}`, 'o'); }
+    catch (e) { fail++; log(`No se pudo mover «${p.s.name}»: ${e.message}` + (e.status === 404 ? ' (el archivo ya no está en En proceso: ¿otra sesión lo movió?)' : ''), 'e'); } }
+  if (ok && !await saveRegistry()) log('ATENCIÓN: los archivos se movieron pero el registro no se pudo guardar; vuelve a pulsar «Releer carpeta» y repite si hace falta.', 'e');
+  try { const bytes = buildReportBytes(); const rep = await Drive.sub(S.ctrl.id, 'Reportes'); const stamp = new Date().toISOString().slice(0, 16).replace(/[:T]/g, '-'); await Drive.upload(rep.id, `Conciliacion_${stamp}.xlsx`, new Blob([bytes]), 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'); log(`Reporte de evidencia guardado en _Control/Reportes/Conciliacion_${stamp}.xlsx`, 'o'); } catch (e) { log('No pude guardar el reporte en _Control: ' + e.message, 'w'); }
+  log(`Movimiento terminado: ${ok} movidos, ${fail} con error.`, fail ? 'w' : 'o'); await refreshSupports(); await runReconcile(); }
+function markMoved(p, folder, name) { const sig = Core.sigOf(p.t, S.vIndex); let en = S.registry.entries.find(e => e.savedName === p.s.name && e.folder === 'En proceso');
+  if (!en) { en = {hash: null, originalName: p.s.name, savedName: p.s.name, vendor: p.s.vendor, date: p.s.iso, amount: p.s._abs / 100, savedAt: null}; S.registry.entries.push(en); }
+  en.savedName = name; en.folder = folder; en.status = 'Conciliado'; en.movedAt = new Date().toISOString(); en.movedBy = S.cfg.operator || null; en.manual = p.status !== 'CONCILIADO'; en.qbo = {sig, type: p.t.type, num: p.t.num, date: p.t.iso, amount: p.t._abs / 100, vendor: p.t.vendor, row: p.t.rowNum, excel: S.qbo.fileName, matchStatus: p.status}; }
+
+function buildReportBytes() { const R = S.result, res = R.res, s = R.sum, m = c => c / 100, wb = XLSX.utils.book_new(); const q = S.qbo;
+  const sheet = (name, rows, moneyCols, widths) => { const ws = XLSX.utils.aoa_to_sheet(rows); rows.forEach((r, ri) => r.forEach((v, ci) => { if (typeof v === 'number' && (moneyCols || []).includes(ci)) { const c = ws[XLSX.utils.encode_cell({r: ri, c: ci})]; if (c) c.z = '#,##0.00'; } })); ws['!cols'] = (widths || []).map(w => ({wch: w})); XLSX.utils.book_append_sheet(wb, ws, name); };
+  sheet('Resumen', [['Reporte de conciliación de soportes · Mi Empresa HVAC'], [], ['Generado', R.ran.toLocaleString('en-US')], ['Archivo QBO', q.fileName], ['Hoja / fila de encabezado', `${q.sheet} / ${q.hdrRow + 1}`], ['Tipos incluidos', [...q.include].join(', ')], ['Tolerancia de fecha (± días)', R.tol], ['Ventana de revisión por fecha (días)', 45], ['Consolidar líneas', S.consolidate ? 'Sí' : 'No'], [],
+    ['Concepto', 'Cantidad', 'Monto USD'], ['Transacciones QBO analizadas', s.total.n, m(s.total.c)], ['Conciliadas', s.conc.n, m(s.conc.c)], ['   de las cuales de corridas previas', s.conc.prev, ''], ['Por revisar', s.rev.n, m(s.rev.c)], ['Pendientes de recibir', s.pend.n, m(s.pend.c)], ['Soportes sin transacción en QBO', s.sin.n, m(s.sin.c)], [],
+    ['Control: QBO = Conciliado + Por revisar + Pendiente', s.control ? 'CUADRA' : 'NO CUADRA', m(s.total.c - s.conc.c - s.rev.c - s.pend.c)]], [2], [52, 18, 16]);
+  const pr = p => [LBL[p.status] + (p.s.locked ? ' (ya conciliado)' : ''), Core.fmtUS(p.t.iso), p.t.type, p.t.num, p.t.vendor, m(p.t._abs), p.s.name, p.s.folder, Core.fmtUS(p.s.iso), m(p.s._abs), p.dsd, m(p.dc), p.accept ? 'Sí' : (p.s.locked ? '' : 'No'), p.why, p.t.rowNum];
+  const ph = ['Estado', 'Fecha QBO', 'Tipo', 'Núm', 'Vendor QBO', 'Monto QBO', 'Archivo soporte', 'Carpeta', 'Fecha archivo', 'Monto archivo', 'Δ días', 'Δ monto', 'Aceptado / movido', 'Motivo', 'Fila Excel'], pw = [24, 12, 18, 10, 28, 13, 46, 20, 12, 13, 8, 10, 12, 60, 9];
+  sheet('Conciliados', [ph, ...res.pairs.filter(p => p.status === 'CONCILIADO').map(pr)], [5, 9, 11], pw); sheet('Por revisar', [ph, ...res.pairs.filter(p => p.status !== 'CONCILIADO').map(pr)], [5, 9, 11], pw);
+  sheet('Pendientes de recibir', [['Fecha', 'Tipo', 'Núm', 'Vendor', 'Monto USD', 'Memo', 'Motivo', 'Fila Excel'], ...res.pend.map(x => [Core.fmtUS(x.t.iso), x.t.type, x.t.num, x.t.vendor, m(x.t._abs), x.t.memo, x.why, x.t.rowNum])], [4], [12, 18, 10, 30, 13, 36, 50, 9]);
+  const g = {}; res.pend.forEach(x => { const k = x.t.vendor || '(sin vendor)'; (g[k] = g[k] || {n: 0, c: 0}); g[k].n++; g[k].c += x.t._abs; });
+  sheet('Pendientes por vendor', [['Vendor', 'Cantidad', 'Monto USD'], ...Object.entries(g).sort((a, b) => b[1].c - a[1].c).map(([k, x]) => [k, x.n, m(x.c)])], [2], [34, 10, 14]);
+  sheet('Soportes sin transacción', [['Archivo', 'Carpeta', 'Vendor', 'Fecha', 'Monto USD', 'Motivo'], ...res.sin.map(x => [x.s.name, x.s.folder, x.s.vendor, Core.fmtUS(x.s.iso), m(x.s._abs), x.why])], [4], [48, 22, 28, 12, 13, 70]);
+  const ex = q.all.filter(t => !q.include.has(t.typeNorm || '(sin tipo)')); sheet('Excluidos (otros tipos)', [['Fecha', 'Tipo', 'Núm', 'Vendor', 'Monto USD', 'Fila Excel'], ...ex.map(t => [Core.fmtUS(t.iso), t.type, t.num, t.vendor, m(t.cents), t.rowNum])], [4], [12, 26, 10, 30, 13, 9]);
+  return XLSX.write(wb, {type: 'array', bookType: 'xlsx'}); }
+function downloadReport() { try { const bytes = buildReportBytes(); const a = document.createElement('a'); a.href = URL.createObjectURL(new Blob([bytes], {type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'})); a.download = 'Conciliacion_soportes_' + new Date().toISOString().slice(0, 10) + '.xlsx'; a.click(); log('Reporte Excel descargado.', 'o'); } catch (e) { log('No pude generar el reporte: ' + e.message, 'e'); } }
+
+/* =====================================================================
+   AYUDA Y AUTOPRUEBA
+   ===================================================================== */
+$('#helpBody').innerHTML = `
+<h2>Cómo se usa</h2>
+<h3>Preparación (una sola vez)</h3>
+<ol><li>Usa <b>Google Chrome o Microsoft Edge</b> y entra siempre con la <b>cuenta de resguardo</b> (la misma para quien cubra las vacaciones).</li>
+<li>Abre «Conexión con Google», pega el <b>Client ID</b> (ver la guía de configuración) y escribe tu nombre en «Operador».</li>
+<li>Pulsa «Conectar con Google Drive». Si la carpeta raíz no existe, la herramienta pide confirmación y la crea con <code>En proceso</code> y <code>_Control</code>. Después se crean <code>Conciliados MM-AAAA</code> (uno por mes de la transacción).</li>
+<li>Pulsa «Probar conexión»: debe terminar en «TODO CORRECTO».</li>
+<li>En «Vendors» escribe el nombre de tu empresa en «Nombres a ignorar» y pega la lista de vendors de QBO: el nombre principal debe ser idéntico al de QBO.</li></ol>
+<h3>Relevo (vacaciones)</h3>
+<ul><li>Una persona a la vez. Quien cubre abre la misma página, entra con la misma cuenta de resguardo, escribe su nombre en «Operador» y pulsa «Releer carpeta» antes de empezar.</li>
+<li>El registro y la tabla de vendors viven en <code>_Control</code> dentro de Drive, así que el relevo continúa donde quedó el anterior. Cada soporte y cada movimiento guarda quién lo hizo.</li></ul>
+<h3>Flujo diario o semanal</h3>
+<ol><li><b>Procesar:</b> arrastra los PDF, imágenes o correos .eml. La herramienta lee vendor, fecha y monto, propone el nombre <code>Vendor_MM-DD-AAAA_monto.ext</code> y marca la certeza. Revisa (la vista previa está a la derecha), corrige lo necesario y pulsa «Guardar». Los de certeza <b>baja</b> nunca se preseleccionan.</li>
+<li><b>Conciliar (al cierre o cuando quieras):</b> sube el Excel de Bills y Expenses de QBO, confirma las columnas y los tipos, y pulsa «Conciliar». Revisa los resultados y pulsa «Mover». Puedes subir el Excel acumulado varias veces: lo ya conciliado se reconoce y no se vuelve a mover.</li></ol>
+<h3>Formato esperado del Excel de QBO</h3>
+<ul><li>Columnas obligatorias: <b>Fecha</b> (Date), <b>Vendor</b> (Name / Payee) y <b>Monto</b> (Amount / Total). Opcionales: Tipo de transacción, Número, Memo.</li>
+<li>Se aceptan títulos arriba del encabezado y filas de totales abajo (se ignoran). Formatos de fecha: MM/DD/AAAA, AAAA-MM-DD o fecha de Excel. Los montos se comparan en valor absoluto.</li></ul>
+<h3>Cómo se concilia (reglas fijas)</h3>
+<ul><li><b>Conciliado:</b> mismo vendor (tras normalizar y aplicar alias), monto exacto al centavo y fecha dentro de la tolerancia. Cada soporte se usa una sola vez.</li>
+<li><b>Por revisar:</b> fecha fuera de tolerancia (hasta 45 días), monto diferente, o vendor parecido pero no igual. Nunca se mueven sin tu ✓.</li>
+<li><b>Pendiente de recibir:</b> transacción sin soporte. <b>Soporte sin transacción:</b> archivo sin partida en el Excel.</li></ul>
+<h3>Controles y errores comunes</h3>
+<ul><li>El control de suma debe decir CUADRA: QBO = Conciliado + Por revisar + Pendiente.</li>
+<li>Duplicados: un mismo archivo (por huella SHA-256) no se guarda dos veces. Si dos soportes tienen el mismo nombre, el segundo lleva sufijo <code>_2</code>. Al mover, los archivos se trasladan dentro de Drive (no se copian) y nunca se borran.</li>
+<li>PDF escaneado o imagen: no se leen automáticamente; captura los datos a mano con la vista previa.</li>
+<li>Correo sin adjuntos (factura solo en el cuerpo): guárdala como PDF e inclúyela.</li>
+<li>Si el vendor sale «Vendor distinto», falta un alias en la pestaña Vendors.</li>
+<li>Montos en el nombre del archivo van sin separador de miles (ej. <code>1250.00</code>) y fechas con guiones (los diagonales no son válidos en nombres).</li></ul>
+<h3>Evidencia que queda documentada</h3>
+<ul><li><code>_Control/registro_soportes.json</code>: cada soporte, su origen, si fue editado a mano y su partida de QBO.</li><li><code>_Control/Reportes/Conciliacion_*.xlsx</code>: reporte de cada movimiento. La bitácora de esta pantalla muestra cada acción.</li></ul>
+<h3>Privacidad</h3>
+<p>Los documentos se leen en tu navegador y solo se guardan en la carpeta de Drive de la cuenta de resguardo; no pasan por ningún otro servidor. Se descargan de internet las librerías de lectura de PDF, Excel y el inicio de sesión de Google. Con el permiso «drive.file» la herramienta solo ve los archivos que ella misma crea. Las facturas pueden traer datos bancarios: no compartas la carpeta ni la contraseña de la cuenta. Si compartes esta herramienta, la tabla de vendors o los reportes fuera del equipo, anonimiza vendors y montos.</p>`;
+
+function runSelfTest() { const T = Core, rows = []; const chk = (name, got, exp) => rows.push({name, got: String(got), exp: String(exp), ok: String(got) === String(exp)});
+  const vi = T.buildVendorIndex({vendors: [{name: 'ABC Supply', aliases: ['ABC Supply Inc.']}, {name: 'Cool Parts LLC', aliases: []}, {name: 'Desert Fuel Co', aliases: []}, {name: 'Quick Tools', aliases: []}]}); const ctx = {vIndex: vi, ignoreKeys: ['mi empresa']};
+  let e = T.extractFields(['ABC Supply Inc.', '1200 W Main St, Phoenix AZ 85001', 'INVOICE', 'Invoice Date: 10/15/2026   Due Date: 11/14/2026', 'Bill To: Mi Empresa HVAC', 'Description   Qty   Price   Total', 'Capacitor 40/5   10   115.00   1,150.00', 'Subtotal   1,150.00', 'Sales Tax   100.00', 'Total Due   $1,250.00'], ctx);
+  chk('Extracción A · vendor', e.vendor.name, 'ABC Supply'); chk('Extracción A · fecha (ignora Due Date)', e.date.iso, '2026-10-15'); chk('Extracción A · monto (ignora Subtotal/Tax)', e.amount.cents, 125000); chk('Extracción A · certeza', e.conf, 'alta');
+  e = T.extractFields(['COOL PARTS LLC', 'Invoice #  Date  Due Date', 'CP-8841  October 3, 2026  November 2, 2026', 'Balance Due', '$482.37'], ctx);
+  chk('Extracción B (encabezados apilados) · fecha', e.date.iso, '2026-10-03'); chk('Extracción B · monto en línea siguiente', e.amount.cents, 48237); chk('Extracción B · vendor', e.vendor.name, 'Cool Parts LLC');
+  e = T.extractFields(['Desert Fuel Co', 'Statement', 'Invoice Date 2026-10-20', 'Amount Due 89.10'], ctx); chk('Extracción C · fecha ISO', e.date.iso, '2026-10-20'); chk('Extracción C · monto', e.amount.cents, 8910);
+  e = T.extractFields(['Quick Tools', 'Date: 10/12/2026', 'Total 75.50', 'Total 57.50'], ctx); chk('Extracción D · totales distintos → certeza baja', e.conf, 'baja');
+  e = T.extractFields(['Zeta Refrigeration Wholesale', 'Invoice Date: 10/09/2026', 'Total $410.00'], ctx); chk('Extracción E · vendor nuevo propuesto', e.vendor.name, 'Zeta Refrigeration Wholesale'); chk('Extracción E · vendor nuevo → certeza baja', e.conf, 'baja');
+  chk('Nombre de archivo', T.buildName('ABC/Supply: Inc.', '2026-10-15', 125000, '.pdf'), 'ABC Supply Inc_10-15-2026_1250.00.pdf'); const pn = T.parseName('Metro Electric_10-20-2026_640.00_2.pdf'); chk('Lectura de nombre (vendor/fecha/monto)', pn && [pn.vendor, pn.iso, pn.cents].join('|'), 'Metro Electric|2026-10-20|64000');
+  const mk = (id, iso, type, vendor, amt) => ({id, rowNum: +id.slice(1) + 1, iso, type, typeNorm: type.toLowerCase(), num: '', vendor, cents: Math.round(amt * 100), memo: ''}); const mkS = (n, v, iso, amt) => ({id: n, name: n, folder: 'En proceso', locked: false, vendor: v, iso, cents: Math.round(amt * 100)});
+  const tx = [mk('Q1', '2026-10-15', 'Bill', 'ABC Supply', 1250), mk('Q2', '2026-10-05', 'Expense', 'Cool Parts LLC', 482.37), mk('Q3', '2026-10-20', 'Expense', 'Desert Fuel Co', 89.10), mk('Q4', '2026-10-10', 'Bill', 'Johnson Controls', 2000), mk('Q5', '2026-10-12', 'Expense', 'Quick Tools', 57.50), mk('Q6', '2026-10-02', 'Bill', 'Metro Electric', 640), mk('Q7', '2026-10-14', 'Expense', 'Arctic Air Wholesale', 220), mk('Q8', '2026-10-01', 'Expense', 'Monthly Software', 99), mk('Q9', '2026-10-01', 'Expense', 'Monthly Software', 99)];
+  const sp = [mkS('S1', 'ABC Supply', '2026-10-15', 1250), mkS('S2', 'Cool Parts LLC', '2026-10-03', 482.37), mkS('S3', 'Desert Fuel Co', '2026-10-20', 89.10), mkS('S4', 'Quick Tools', '2026-10-12', 75.50), mkS('S5', 'Metro Electric', '2026-10-20', 640), mkS('S6', 'Arctic Air', '2026-10-14', 220), mkS('S7', 'Monthly Software', '2026-10-01', 99), mkS('S8', 'Mystery Vendor', '2026-10-09', 410)];
+  const r = T.reconcile(tx, sp, {tolDays: 5, reviewWindow: 45, vIndex: T.buildVendorIndex({vendors: []})}); const st = id => { const p = r.pairs.find(x => x.t.id === id); return p ? p.status : (r.pend.find(x => x.t.id === id) ? 'PENDIENTE' : '?'); };
+  chk('Concilia Q1 (exacto)', st('Q1'), 'CONCILIADO'); chk('Concilia Q2 (fecha ±2 días)', st('Q2'), 'CONCILIADO'); chk('Concilia Q3', st('Q3'), 'CONCILIADO'); chk('Q5 monto distinto', st('Q5'), 'MONTO_DIF'); chk('Q6 fecha fuera de tolerancia', st('Q6'), 'FECHA_FUERA'); chk('Q7 vendor parecido', st('Q7'), 'VENDOR_DIF');
+  chk('Q8 y Q9 idénticos con 1 solo soporte: uno concilia', [st('Q8'), st('Q9')].filter(x => x === 'CONCILIADO').length, 1); chk('Q8 y Q9: el otro queda pendiente', [st('Q8'), st('Q9'), st('Q4')].filter(x => x === 'PENDIENTE').length, 2); chk('Soporte sin transacción (S8)', r.sin.map(x => x.s.id).join(','), 'S8');
+  const sm = T.summarize(r, tx); chk('Suma conciliada USD', T.money(sm.conc.c), '1,920.47'); chk('Suma por revisar USD', T.money(sm.rev.c), '917.50'); chk('Suma pendiente USD', T.money(sm.pend.c), '2,099.00'); chk('Control de suma (QBO = conc + rev + pend)', sm.control, true);
+  const rows2 = [['Mi Empresa HVAC'], ['Transaction List by Date'], [], ['Date', 'Transaction Type', 'Num', 'Name', 'Memo/Description', 'Amount'], ['10/15/2026', 'Bill', '1001', 'ABC Supply', 'x', '1,250.00'], [46300, 'Expense', '', 'Cool Parts LLC', '', -482.37], ['Total', '', '', '', '', 1732.37]]; const h = T.findHeader(rows2); const pt = T.parseTxns(rows2, h.row, h.map);
+  chk('Excel: fila de encabezado detectada', h.row, 3); chk('Excel: filas válidas (ignora títulos y total)', pt.txns.length, 2); chk('Excel: monto negativo → valor absoluto', pt.txns[1] && pt.txns[1].cents, 48237); chk('Excel: fecha de Excel (serial 46300)', pt.txns[1] && pt.txns[1].iso, '2026-10-05');
+  { const A = {hash: 'h1', savedName: 'A_10-01-2026_1.00.pdf', folder: 'En proceso', savedAt: '2026-10-01T10:00:00Z'}, A2 = {...A, folder: 'Conciliados 10-2026', movedAt: '2026-10-05T10:00:00Z', operator: 'x'}, B = {hash: 'h2', savedName: 'B.pdf', folder: 'En proceso', savedAt: '2026-10-02T10:00:00Z'}, C = {hash: 'h3', savedName: 'C.pdf', folder: 'En proceso', savedAt: '2026-10-03T10:00:00Z'};
+    let m = T.mergeRegistry({entries: [A2, B]}, {entries: [A, C]}); chk('Registro: une entradas de dos sesiones', m.entries.length, 3); chk('Registro: gana la versión más reciente (movido)', m.entries.find(x => x.hash === 'h1').folder, 'Conciliados 10-2026');
+    m = T.mergeRegistry({entries: [A]}, {entries: [A2]}); chk('Registro: local más nuevo sobre remoto', m.entries[0].folder, 'Conciliados 10-2026'); m = T.mergeRegistry(null, null); chk('Registro: vacío', m.entries.length, 0);
+    m = T.mergeRegistry({entries: [{hash: null, originalName: 'z.pdf', date: '2026-10-01', amount: 5}]}, {entries: [{hash: null, originalName: 'z.pdf', date: '2026-10-01', amount: 5}]}); chk('Registro: sin hash no se duplica', m.entries.length, 1); }
+  $('#selfTestOut').innerHTML = `<div class="alert ${rows.every(x => x.ok) ? 'ok' : 'err'}">${rows.filter(x => x.ok).length} de ${rows.length} pruebas correctas</div><div class="tblwrap"><table><thead><tr><th>Prueba</th><th>Esperado</th><th>Obtenido</th><th>Resultado</th></tr></thead><tbody>${rows.map(x => `<tr><td>${esc(x.name)}</td><td>${esc(x.exp)}</td><td>${esc(x.got)}</td><td><span class="badge ${x.ok ? 'CONCILIADO' : 'baja'}">${x.ok ? 'PASS' : 'FAIL'}</span></td></tr>`).join('')}</tbody></table></div>`; return rows; }
+$('#btnSelfTest').onclick = runSelfTest; window.__runSelfTest = runSelfTest; window.__S = S;
+
+/* ---------- arranque ---------- */
+(function init() {
+  try { const v = JSON.parse(localStorage.getItem('soportes.vendors.v1') || 'null'); if (v && Array.isArray(v.vendors)) { S.vendors = {vendors: v.vendors}; if (v.ignore != null) S.ignore = v.ignore; } } catch (e) {}
+  try { const c = JSON.parse(localStorage.getItem(CFG_KEY) || 'null'); if (c && typeof c === 'object') Object.assign(S.cfg, c); } catch (e) {}
+  $('#cfgClient').value = S.cfg.clientId || GOOGLE_CLIENT_ID; $('#cfgRoot').value = S.cfg.rootName; $('#cfgOp').value = S.cfg.operator || ''; $('#cfgFull').checked = !!S.cfg.fullScope;
+  rebuildIndex(); renderVendors(); renderFolder(); renderItems();
+  const miss = []; if (typeof pdfjsLib === 'undefined') miss.push('lectura de PDF (pdf.js)'); if (typeof XLSX === 'undefined') miss.push('lectura/escritura de Excel (SheetJS)');
+  if (miss.length) $('#libAlert').innerHTML = `<div class="alert err">No se cargaron las librerías de ${miss.join(' y ')}. Se necesita conexión a internet al abrir la herramienta. Recarga la página.</div>`;
+  if (typeof pdfjsLib !== 'undefined') pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
+  window.addEventListener('load', () => { if (!(window.google && google.accounts)) $('#libAlert').insertAdjacentHTML('beforeend', '<div class="alert err">No se cargó el inicio de sesión de Google. Se necesita internet y que no esté bloqueado accounts.google.com. Recarga la página.</div>'); });
+  log(S.cfg.rootId ? 'Herramienta lista. Pulsa «Reconectar con Google» para continuar.' : 'Herramienta lista. Configura el Client ID y conecta con Google Drive para empezar.'); })();
+</script>
+</body>
+</html>
