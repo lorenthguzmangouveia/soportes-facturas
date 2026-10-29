@@ -56,7 +56,14 @@ tr.st-guardado td{background:#f1faf4}tr.st-duplicado td,tr.st-error td{backgroun
 .final{font-family:Consolas,monospace;font-size:12px;word-break:break-all;color:#2b3a55}
 .empty{text-align:center;color:var(--mute);padding:22px}
 #preview{position:sticky;top:10px}
-#preview canvas,#preview img{max-width:100%;border:1px solid var(--line);border-radius:6px}
+#preview canvas,#preview img{max-width:100%;border:1px solid var(--line);border-radius:6px;cursor:zoom-in}
+#lb{position:fixed;inset:0;background:rgba(0,0,0,.82);z-index:1000;display:none;flex-direction:column}
+#lb.on{display:flex}
+#lb .bar{display:flex;gap:10px;align-items:center;padding:8px 14px;color:#fff;font-size:13px}
+#lb .bar .t{flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+#lb .bar button{background:#fff;color:#111;border:0;border-radius:6px;padding:5px 12px;cursor:pointer;font-size:13px}
+#lb .area{flex:1;overflow:auto;text-align:center;padding:0 14px 20px}
+#lb .area canvas,#lb .area img{display:block;margin:0 auto 14px;background:#fff;border-radius:4px}
 .cards{display:grid;grid-template-columns:repeat(auto-fit,minmax(170px,1fr));gap:10px;margin:10px 0}
 .kpi{border:1px solid var(--line);border-radius:9px;padding:10px;background:#fff}
 .kpi .n{font-size:22px;font-weight:700}.kpi .t{font-size:12px;color:var(--mute)}.kpi .m{font-size:12.5px;font-variant-numeric:tabular-nums}
@@ -100,7 +107,7 @@ small.mute{color:var(--mute)}
 <div><label>Client ID de Google (OAuth)</label><input type="text" id="cfgClient" placeholder="xxxxxxxx.apps.googleusercontent.com"></div>
 <div><label>Carpeta raíz en Drive</label><input type="text" id="cfgRoot" placeholder="Soportes_Facturas"></div>
 <div><label>Operador (quién usa la herramienta hoy)</label><input type="text" id="cfgOp" placeholder="Nombre o iniciales"></div>
-<div><label><input type="checkbox" id="cfgFull"> Acceso completo a Drive (usar solo si «Probar conexión» indica que no ves archivos de la otra persona)</label></div></div>
+<div><label><input type="checkbox" id="cfgFull"> Acceso completo a Drive (recomendado aquí: permite ver y traer a la lista lo que se suba a mano a «En proceso»). Si lo quitas, solo se ven los archivos subidos por la herramienta</label></div></div>
 <div class="row" style="margin-top:10px"><button class="btn sec" id="gDiag">Probar conexión</button><small class="mute">Crea y borra una carpeta y un archivo de prueba para validar permisos.</small></div>
 <pre id="diagOut" style="font:12px/1.5 Consolas,monospace;white-space:pre-wrap;margin:8px 0 0"></pre></details></div>
 
@@ -111,6 +118,9 @@ small.mute{color:var(--mute)}
 <section id="tab-proc">
   <div class="card">
     <h2>Cargar soportes</h2>
+    <div class="row" style="margin-bottom:10px"><button class="btn sec" id="btnDriveIn" title="Trae a la lista los PDF/imágenes que se subieron a mano a «En proceso»">Traer lo subido a mano a Drive</button><button class="btn sec" id="btnOcr" disabled title="Lee con OCR los PDF escaneados y las fotos de la lista">Leer con OCR (0)</button><button class="btn sec" id="btnGmail">Buscar adjuntos en Gmail</button><span class="src">Gmail: solo lectura; no marca, mueve ni borra correos.</span></div>
+    <div id="gmPanel" class="card" style="display:none;margin-bottom:10px"></div>
+    <div class="row" style="margin-bottom:10px"><label class="btn sec">Cargar Excel de QBO (opcional)<input type="file" id="xlsIn2" accept=".xlsx,.xls,.csv" hidden></label><span id="xlsName2" class="src">Con el Excel de QBO la herramienta toma la <b>fecha del sistema</b> (la del registro del costo o gasto) para nombrar cada soporte.</span></div>
     <div class="drop" id="drop">
       <b>Arrastra aquí</b> PDF, imágenes o correos <b>.eml</b> (Gmail → ⋮ → «Descargar mensaje») — o <u>haz clic para elegirlos</u>
       <input type="file" id="fileIn" multiple accept=".pdf,.png,.jpg,.jpeg,.webp,.gif,.eml" hidden>
@@ -132,7 +142,8 @@ small.mute{color:var(--mute)}
         </table>
       </div>
     </div>
-    <div class="card" id="preview"><h2>Vista previa</h2><div id="pvBody" class="src">Haz clic en el nombre de un archivo para verlo aquí.</div></div>
+    <div id="lb" role="dialog" aria-label="Vista ampliada"><div class="bar"><span class="t" id="lbT"></span><button id="lbMinus" title="Alejar">−</button><span id="lbZ">100%</span><button id="lbPlus" title="Acercar">+</button><button id="lbX">Cerrar (Esc)</button></div><div class="area" id="lbA"></div></div>
+    <div class="card" id="preview"><h2>Vista previa</h2><div id="pvBody" class="src">Haz clic en el nombre de un archivo para verlo aquí; haz clic en la vista previa para ampliarla.</div></div>
   </div>
   <datalist id="dlVendors"></datalist>
 </section>
@@ -238,7 +249,7 @@ const Core = (() => {
     const out = []; for (const h of hits) { if (out.some(o => h.idx >= o.idx && h.end <= o.end)) continue; out.push(h); } return out.sort((a, b) => a.idx - b.idx); };
 
   const MONEY_RE = /(?<![\w.,$])(\$\s?)?(\d{1,3}(?:,\d{3})+|\d+)(\.\d{2})?(?!\d|[.,]\d)/g;
-  const moneyTokens = seg => { const out = []; let m; const re = new RegExp(MONEY_RE.source, 'g');
+  const moneyTokens = seg => { seg = String(seg).replace(/\b(?:US|USD|CAD|MXN)\s?\$/gi, '$'); const out = []; let m; const re = new RegExp(MONEY_RE.source, 'g');
     while ((m = re.exec(seg))) { if (!m[1] && !m[3]) continue; const int = m[2].replace(/,/g, ''); const cents = parseInt(int, 10) * 100 + (m[3] ? parseInt(m[3].slice(1), 10) : 0); out.push({cents, idx: m.index}); } return out; };
 
   const AMT_PATS = [
@@ -250,6 +261,8 @@ const Core = (() => {
     {re: /(previous|prior|past)\s*(balance|due)|balance\s*forward/, kind: 'x'},
     {re: /(amount|balance|total)\s*due|\bnet\s*due\b|(amount|total)\s*(to\s*pay|payable)|please\s*pay|pay\s*this\s*amount/, kind: 'k', tier: 1},
     {re: /(grand|invoice|final|order)\s*total|total\s*(amount|usd|invoice|charged|sale)|amount\s*(paid|charged|received)/, kind: 'k', tier: 2},
+    {re: /(?<![a-z])paid\s*(?=\$)/, kind: 'k', tier: 2},
+    {re: /amount\s*applied(\s*to\s*invoice)?|authori[sz]ation\s*amount/, kind: 'k', tier: 2},
     {re: /(?<![a-z])total\b/, kind: 'k', tier: 2},
   ];
   const detectAmount = lines => {
@@ -258,11 +271,12 @@ const Core = (() => {
       for (let h = 0; h < hits.length; h++) { const k = hits[h]; if (k.kind !== 'k') continue;
         const regionEnd = h + 1 < hits.length ? hits[h + 1].idx : line.length; const toks = moneyTokens(line.slice(k.end, regionEnd));
         if (toks.length) { cands.push({tier: k.tier, cents: toks[0].cents, i, label: line.slice(k.idx, k.end)}); continue; }
-        if (k.tier === 1 && h === hits.length - 1 && i + 1 < lines.length && !scan(lines[i + 1], AMT_PATS).length && line.split(/\s+/).length <= 5) {
-          const t2 = moneyTokens(lines[i + 1]); if (t2.length) cands.push({tier: 1, cents: t2[0].cents, i, label: line.slice(k.idx, k.end), stacked: true}); } } }
+        if (h === hits.length - 1 && i + 1 < lines.length && !scan(lines[i + 1], AMT_PATS).length && (k.tier === 1 ? line.split(/\s+/).length <= 5 : line.trim().split(/\s+/).length <= 2)) {
+          const t2 = moneyTokens(lines[i + 1]); if (t2.length) cands.push({tier: hits.length > 1 ? 3 : k.tier, cents: t2[0].cents, i, label: line.slice(k.idx, k.end), stacked: true, multi: hits.length > 1}); } } }
+    { const nz = cands.filter(c => c.cents > 0); if (nz.length) { cands.length = 0; cands.push(...nz); } }
     const alts = [...new Set(cands.map(c => c.cents))];
     if (cands.length) { const best = Math.min(...cands.map(c => c.tier)); const set = cands.filter(c => c.tier === best); const distinct = [...new Set(set.map(c => c.cents))];
-      if (distinct.length === 1) return {cents: distinct[0], tier: best, label: set[0].label, conf: 'alta', alts, note: ''};
+      if (distinct.length === 1) { const multi = set.every(c => c.multi); return {cents: distinct[0], tier: best, label: set[0].label, conf: multi ? 'baja' : 'alta', alts, note: multi ? 'El encabezado tiene varias columnas y el monto está en otra línea: verifica que sea el total' : ''}; }
       const last = set[set.length - 1]; return {cents: last.cents, tier: best, label: last.label, conf: 'baja', alts, note: 'Varios montos con etiqueta de total (' + distinct.map(money).join(', ') + '): verifica cuál es el correcto'}; }
     const all = []; lines.forEach(l => moneyTokens(l).forEach(t => all.push(t.cents)));
     if (all.length) return {cents: Math.max(...all), tier: 3, label: '(sin etiqueta)', conf: 'baja', alts: [...new Set(all)].sort((a, b) => b - a).slice(0, 5), note: 'No encontré «Total / Amount Due»; propuse el monto mayor del documento'};
@@ -300,15 +314,16 @@ const Core = (() => {
     return {iso: null, tier: 9, conf: 'baja', alts: [], note: 'No encontré fecha'};
   };
 
-  const BLACK = /^(invoice|statement|receipt|bill|page|date|tax|customer|ship|remit|payment|order|quote|estimate|credit memo|packing|sold to|bill to|account|phone|fax|tel|email|www|http|description|qty)/i;
+  const BLACK = /^(invoice|statement|receipt|bill|page|date|tax|customer|ship|remit|payment|order|quote|estimate|credit memo|packing|sold to|bill to|account|phone|fax|tel|email|www|http|description|qty|attn|attention|branch|store|location|purchase|billing|server|cashier|check|table|guest|address|city|sold by|terms|p\.?o\.?\b|ref|thank|delivery|pick\s?up)/i;
   const detectVendor = (lines, vi, ignoreKeys) => {
     ignoreKeys = (ignoreKeys || []).map(normName).filter(Boolean);
     const isOwn = k => ignoreKeys.some(g => k.includes(g) || g.includes(k));
-    const text = ' ' + lines.map(l => normName(l)).join(' | ') + ' '; const found = [];
-    for (const v of (vi ? vi.list : [])) { let best = -1; for (const k of v.keys) { if (isOwn(k)) continue; const idx = text.indexOf(' ' + k + ' '); if (idx >= 0 && (best < 0 || idx < best)) best = idx; } if (best >= 0) found.push({name: v.name, idx: best}); }
+    const text = ' ' + lines.map(l => normName(l)).join(' | ') + ' '; const flat = ' ' + lines.map(l => normName(l)).join(' ') + ' '; const found = [];
+    for (const v of (vi ? vi.list : [])) { let best = -1, klen = 0; for (const k of v.keys) { if (isOwn(k)) continue; let idx = text.indexOf(' ' + k + ' '); if (idx < 0 && k.includes(' ')) idx = flat.indexOf(' ' + k + ' '); if (idx >= 0 && (best < 0 || idx < best)) { best = idx; klen = Math.max(klen, k.length); } else if (idx >= 0) klen = Math.max(klen, k.length); } if (best >= 0) found.push({name: v.name, idx: best, klen}); }
+    if (found.length > 1) { const byLen = found.slice().sort((a, b) => b.klen - a.klen); if (byLen[0].klen >= 1.5 * byLen[1].klen) return {name: byLen[0].name, known: true, conf: 'alta', note: ''}; }
     if (found.length) { found.sort((a, b) => a.idx - b.idx); return {name: found[0].name, known: true, conf: found.length > 1 ? 'media' : 'alta', note: found.length > 1 ? 'Se mencionan varios vendors de la tabla (' + found.map(f => f.name).join(', ') + '); tomé el que aparece primero' : ''}; }
     for (let i = 0; i < Math.min(lines.length, 14); i++) { let l = lines[i].trim().split(/\s{3,}/)[0].trim(); if (l.length < 3 || l.length > 60 || !/[A-Za-z]{3}/.test(l) || /^\d/.test(l) || BLACK.test(l) || /@|https?:|www\.|\d{3}[-. ]\d{3,4}/.test(l)) continue;
-      if (isOwn(normName(l))) continue; return {name: l, known: false, conf: 'baja', note: 'Vendor no está en la tabla; propuse la primera línea del documento. Confírmalo o corrígelo'}; }
+      if (isOwn(normName(l)) || /\b[A-Z]{2},?\s*\d{5}\b|^(ste|suite|apt|unit|po box)\b/i.test(l)) continue; return {name: l, known: false, conf: 'baja', note: 'Vendor no está en la tabla; propuse la primera línea del documento. Confírmalo o corrígelo'}; }
     return {name: '', known: false, conf: 'baja', note: 'No pude identificar el vendor'};
   };
 
@@ -342,7 +357,7 @@ const Core = (() => {
     if (typeof v === 'number') return Math.round(v * 100);
     let s = String(v).trim(); let neg = false; if (/^\(.*\)$/.test(s)) { neg = true; s = s.slice(1, -1); } s = s.replace(/[$,\s]/g, ''); if (s.startsWith('-')) { neg = !neg; s = s.slice(1); }
     if (!/^\d+(\.\d+)?$/.test(s)) return null; const c = Math.round(parseFloat(s) * 100); return neg ? -c : c; };
-  const INCLUDE_DEFAULT = /^(bill|expense|check|cheque|credit card expense|cash expense)$/;
+  const INCLUDE_DEFAULT = { test: k => !/payment|pago|transfer|deposit|dep[oó]sito|journal|asiento/i.test(k) };
   const parseTxns = (rows, hdrRow, map) => { const out = []; let ignored = 0;
     for (let r = hdrRow + 1; r < rows.length; r++) { const row = rows[r] || []; if (row.every(c => c == null || c === '')) continue;
       const iso = toISO(row[map.date]); const cents = toCents(row[map.amount]); if (!iso || cents == null) { ignored++; continue; }
@@ -352,6 +367,17 @@ const Core = (() => {
   const consolidate = (txns, vi) => { const g = new Map();
     for (const t of txns) { if (!t.num) { g.set('#' + t.id, {...t, lines: 1}); continue; } const k = [t.iso, t.typeNorm, t.num, normName(canonVendor(t.vendor, vi))].join('|'); if (g.has(k)) { const x = g.get(k); x.signed += t.signed; x.cents = Math.abs(x.signed); x.lines++; } else g.set(k, {...t, lines: 1}); }
     return [...g.values()]; };
+  const PAYLIKE = /payment|pago|transfer|deposit|dep[oó]sito|journal|asiento/i;
+  const qboDateFor = (txns, vi, vendor, cents, docIso, used, win, isCredit) => { win = win ?? 20; const vk = normName(canonVendor(vendor, vi)); if (!vk || cents == null) return null;
+    const dist = t => (docIso ? Math.abs(dayNum(t.iso) - dayNum(docIso)) : 0);
+    const rank = t => PAYLIKE.test(t.typeNorm || '') ? 2 : ((/credit|cr[eé]dito/i.test(t.typeNorm || '')) !== !!isCredit ? 1 : 0);
+    let all = txns.filter(t => t.cents === cents && normName(canonVendor(t.vendor, vi)) === vk);
+    if (docIso) { const same = all.filter(t => t.iso.slice(0, 7) === docIso.slice(0, 7)); all = same.length ? same : all.filter(t => dist(t) <= win); }
+    if (!all.length) return null;
+    const free = all.filter(t => !used.has(t.id));
+    if (!free.length) { all.sort((a, b) => rank(a) - rank(b) || dist(a) - dist(b)); return {taken: all[0], n: all.length}; }
+    free.sort((a, b) => rank(a) - rank(b) || dist(a) - dist(b) || (a.iso < b.iso ? -1 : 1)); const best = free[0];
+    return {txn: best, n: free.length, rank: rank(best), crossMonth: !!docIso && best.iso.slice(0, 7) !== docIso.slice(0, 7), ambiguous: free.some(t => t !== best && rank(t) === rank(best) && dist(t) === dist(best) && t.iso !== best.iso)}; };
   const sigOf = (t, vi) => [t.iso, t.typeNorm, t.num, t.cents, normName(canonVendor(t.vendor, vi))].join('|');
 
   /* ---------- conciliación ---------- */
@@ -416,7 +442,7 @@ const Core = (() => {
   function mergeRegistry(remote, local) { const m = new Map(); const put = (e, pref) => { const k = regKey(e), o = m.get(k), te = regTime(e), to = o ? regTime(o) : ''; if (!o || te > to || (te === to && pref)) m.set(k, e); };
     ((remote && remote.entries) || []).forEach(e => put(e, false)); ((local && local.entries) || []).forEach(e => put(e, true));
     return {version: 1, entries: [...m.values()].sort((a, b) => (regTime(a) < regTime(b) ? -1 : regTime(a) > regTime(b) ? 1 : 0))}; }
-  return {mergeRegistry, pad, isoOk, mkIso, fmtUS, fmtFile, dayNum, money, parseMoney, parseUSDate, normName, buildVendorIndex, canonVendor, similar, sanitizeVendor, buildName, parseName,
+  return {qboDateFor, mergeRegistry, pad, isoOk, mkIso, fmtUS, fmtFile, dayNum, money, parseMoney, parseUSDate, normName, buildVendorIndex, canonVendor, similar, sanitizeVendor, buildName, parseName,
     scan, DATE_PATS, AMT_PATS, extractFields, detectAmount, detectDate, detectVendor, moneyTokens, dateTokens, findHeader, detectMapping, parseTxns, consolidate, sigOf, toISO, toCents, INCLUDE_DEFAULT, reconcile, summarize, parseEml};
 })();
 window.SoportesCore = Core;
@@ -470,6 +496,7 @@ const Drive = {
   async move(id, fromId, toId, newName) { const cur = await this.jget(`${API}/files/${encodeURIComponent(id)}?fields=parents,trashed&supportsAllDrives=true`);
     if (cur.trashed || !(cur.parents || []).includes(fromId)) { const e = new Error('El archivo ya no está en la carpeta de origen'); e.status = 404; throw e; }
     return (await this.api(`${API}/files/${encodeURIComponent(id)}?addParents=${encodeURIComponent(toId)}&removeParents=${encodeURIComponent(fromId)}&fields=id,name,parents&supportsAllDrives=true`, {method: 'PATCH', headers: {'Content-Type': 'application/json'}, body: JSON.stringify(newName ? {name: newName} : {})})).json(); },
+  async rename(id, name) { return (await this.api(`${API}/files/${encodeURIComponent(id)}?supportsAllDrives=true&fields=id,name`, {method: 'PATCH', headers: {'Content-Type': 'application/json'}, body: JSON.stringify({name})})).json(); },
   async trash(id) { return (await this.api(`${API}/files/${encodeURIComponent(id)}?supportsAllDrives=true&fields=id`, {method: 'PATCH', headers: {'Content-Type': 'application/json'}, body: JSON.stringify({trashed: true})})).json(); },
   async readJSON(pid, name) { const f = (await this.find(name, pid, false))[0]; if (!f) return null; const t = new TextDecoder().decode(await this.read(f.id)); try { return JSON.parse(t); } catch (e) { throw new Error(`«${name}» en Drive no es un JSON válido; no se sobrescribe. Revísalo en _Control.`); } },
   async writeJSON(pid, name, obj) { const blob = new Blob([JSON.stringify(obj, null, 2)], {type: 'application/json'}); const f = (await this.find(name, pid, false))[0]; return f ? this.updateMedia(f.id, blob, 'application/json') : this.upload(pid, name, blob, 'application/json'); },
@@ -483,8 +510,8 @@ async function sha256(buf) { if (!(window.crypto && crypto.subtle)) return null;
 const $ = (s, r = document) => r.querySelector(s);
 const $$ = (s, r = document) => [...r.querySelectorAll(s)];
 const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({'&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;'}[c]));
-const S = {root: null, enProceso: null, ctrl: null, email: '', vDirty: false, cfg: {clientId: '', fullScope: false, rootName: 'Soportes_Facturas', rootId: null, email: '', operator: ''}, vendors: {vendors: []}, ignore: '', vIndex: Core.buildVendorIndex({vendors: []}),
-  registry: {version: 1, entries: []}, items: [], sel: null, supports: [], nonStd: [], qbo: null, result: null, tol: 5, consolidate: false, view: 'CONCILIADO'};
+const S = {root: null, enProceso: null, ctrl: null, email: '', vDirty: false, cfg: {clientId: '', fullScope: true, scopeV: 2, rootName: 'Soportes_Facturas', rootId: null, email: '', operator: ''}, vendors: {vendors: []}, ignore: '', vIndex: Core.buildVendorIndex({vendors: []}),
+  registry: {version: 1, entries: []}, items: [], sel: null, supports: [], nonStd: [], qbo: null, result: null, tol: 5, consolidate: false, period: {from: '', to: ''}, view: 'CONCILIADO'};
 const IMG_EXT = ['.png', '.jpg', '.jpeg', '.webp', '.gif'];
 const extOf = n => { const m = String(n).toLowerCase().match(/\.[a-z0-9]+$/); return m ? m[0] : ''; };
 function log(msg, cls) { const d = document.createElement('div'); if (cls) d.className = cls; d.textContent = new Date().toLocaleTimeString('en-US') + '  ' + msg; const L = $('#log'); L.appendChild(d); L.scrollTop = L.scrollHeight; }
@@ -569,7 +596,7 @@ let uid = 0;
 async function pdfLines(buf) {
   const pdf = await pdfjsLib.getDocument({data: new Uint8Array(buf.slice(0))}).promise; const pages = Math.min(pdf.numPages, 8); const lines = [];
   for (let p = 1; p <= pages; p++) { const tc = await (await pdf.getPage(p)).getTextContent();
-    const items = tc.items.filter(i => i.str && i.str.trim() !== '').map(i => ({s: i.str, x: i.transform[4], y: i.transform[5], w: i.width || 0})); items.sort((a, b) => b.y - a.y || a.x - b.x);
+    const items = tc.items.filter(i => i.str && i.str.trim() !== '').map(i => ({s: i.str.replace(/\u0000/g, '-').replace(/[\u0001-\u001f]/g, ' '), x: i.transform[4], y: i.transform[5], w: i.width || 0})); items.sort((a, b) => b.y - a.y || a.x - b.x);
     const rows = []; let cur = null; for (const it of items) { if (cur && Math.abs(cur.y - it.y) <= 3) cur.items.push(it); else { cur = {y: it.y, items: [it]}; rows.push(cur); } }
     for (const r of rows) { r.items.sort((a, b) => a.x - b.x); let txt = '', last = null; for (const it of r.items) { if (last !== null) { const gap = it.x - last; txt += gap > 12 ? '   ' : (gap > 1.5 ? ' ' : ''); } txt += it.s; last = it.x + it.w; } lines.push(txt.trim()); } }
   return {lines, numPages: pdf.numPages}; }
@@ -581,11 +608,11 @@ async function buildItem(file, source) {
   if (it.hash) { const dupReg = S.registry.entries.find(e => e.hash === it.hash); const dupList = S.items.find(x => x.hash === it.hash);
     if (dupReg) { it.status = 'duplicado'; it.reason = 'Ya guardado antes como «' + dupReg.savedName + '» (' + (dupReg.folder || '') + ')'; } else if (dupList) { it.status = 'duplicado'; it.reason = 'Mismo archivo que otro de esta lista («' + dupList.name + '»)'; } }
   if (it.kind === 'pdf') { try { const {lines, numPages} = await pdfLines(buf); it.lines = lines; it.numPages = numPages; const txt = lines.join(' ').replace(/\s+/g, '');
-      if (txt.length < 25) { it.notes.push('PDF sin texto legible (escaneo o imagen): captura los datos mirando la vista previa'); it.conf = 'baja'; }
-      else { const ex = Core.extractFields(lines, {vIndex: S.vIndex, ignoreKeys: ignoreKeys()}); it.ex = ex; it.conf = ex.conf; it.notes.push(...ex.notes); if (numPages > 8) it.notes.push('PDF de ' + numPages + ' páginas: solo se leyeron las primeras 8');
-        it.ed.vendor = ex.vendor.name || ''; it.ed.date = ex.date.iso ? Core.fmtUS(ex.date.iso) : ''; it.ed.amt = ex.amount.cents != null ? (ex.amount.cents / 100).toFixed(2) : ''; it.alts = ex.amount.alts || []; } }
-    catch (e) { it.notes.push('No pude leer el PDF (' + (e.message || e) + '). ¿Está protegido con contraseña? Captura manual'); it.conf = 'baja'; } }
-  else it.notes.push('Imagen: no se lee automáticamente; captura vendor, fecha y monto mirando la vista previa');
+      if (txt.length < 25) { it.notes.push('PDF sin texto legible (escaneo o imagen): usa «Leer con OCR» o captura los datos mirando la vista previa'); it.conf = 'baja'; it.needsOcr = true; }
+      else { const ex = Core.extractFields(lines, {vIndex: S.vIndex, ignoreKeys: ignoreKeys()}); it.ex = ex; it.isCredit = /\b(credit\s*memo(randum)?|credit\s*note|vendor\s*credit|nota\s+de\s+cr[eé]dito)\b/i.test(lines.slice(0, 60).join(' ')); if (it.isCredit) ex.notes.push('Nota de crédito (credit memo): se busca su par en QBO (Vendor Credit u otro tipo con el mismo monto)'); it.conf = ex.conf; it.notes.push(...ex.notes); if (numPages > 8) it.notes.push('PDF de ' + numPages + ' páginas: solo se leyeron las primeras 8');
+        it.ed.vendor = ex.vendor.name || ''; it.ed.date = ex.date.iso ? Core.fmtUS(ex.date.iso) : ''; it.ed.amt = ex.amount.cents != null ? (ex.amount.cents / 100).toFixed(2) : ''; it.alts = ex.amount.alts || []; if (ex.conf === 'baja' && (ex.amount.cents == null || !ex.date.iso || !ex.vendor.name)) { it.needsOcr = true; it.notes.push('Datos incompletos en el texto del PDF (puede ser una imagen impresa a PDF): prueba «Leer con OCR»'); } } }
+    catch (e) { it.notes.push('No pude leer el PDF (' + (e.message || e) + '). ¿Está protegido con contraseña? Captura manual'); it.conf = 'baja'; it.needsOcr = true; } }
+  else { it.notes.push('Imagen: usa «Leer con OCR» o captura vendor, fecha y monto mirando la vista previa'); it.needsOcr = true; }
   if (source && source.hint) it.notes.push('Correo: ' + source.hint);
   it.selected = it.status === 'pendiente' && it.conf === 'alta' && itemValid(it) && !dupHint(it); return it; }
 
@@ -605,21 +632,37 @@ async function addFiles(files) {
       else if (ext === '.pdf' || IMG_EXT.includes(ext)) S.items.push(await buildItem(f, null));
       else log(`«${f.name}»: tipo de archivo no soportado (usa PDF, imagen o .eml).`, 'w');
     } catch (e) { log(`Error con «${f.name}»: ${e.message}`, 'e'); } }
-  st.textContent = ''; renderItems(); }
+  st.textContent = ''; applyQboDates(); renderItems(); }
 
+function applyQboDates() { const q = S.qbo; if (!q || q.err || !q.all) return 0;
+  const inc = q.all.filter(t => q.include.has(t.typeNorm || '(sin tipo)')); const regSigs = new Set(S.registry.entries.filter(e => e.qbo && e.qbo.sig).map(e => e.qbo.sig));
+  const used = new Set(inc.filter(t => regSigs.has(Core.sigOf(t, S.vIndex))).map(t => t.id)); let n = 0; const claim = new Map();
+  const todo = S.items.filter(i => i.status === 'pendiente' && !i.dateEdited);
+  todo.forEach(it => { if (it.docIso === undefined) it.docIso = Core.parseUSDate(it.ed.date) || null; if (it.qboTxn) { it.ed.date = it.docIso ? Core.fmtUS(it.docIso) : ''; it.qboTxn = null; } it.qboNote = ''; it.dupFlag = ''; if (it.confBase === undefined) it.confBase = it.conf; it.conf = it.confBase; });
+  todo.slice().sort((a, b) => (a.docIso || '') < (b.docIso || '') ? -1 : 1).forEach(it => { const cents = itemCents(it), vendor = itemVendor(it); if (!vendor || cents == null) return;
+    const r = Core.qboDateFor(inc, S.vIndex, vendor, cents, it.docIso, used, 20, it.isCredit);
+    if (!r) { it.qboNote = 'Sin partida en QBO con ese vendor y monto exacto: se usa la fecha del documento'; return; }
+    if (r.taken) { const by = claim.get(r.taken.id); it.dupFlag = by ? 'Posible duplicado de «' + by.name + '»: la partida de QBO (' + Core.fmtUS(r.taken.iso) + ') ya la tomó ese archivo' : 'Ya hay un soporte guardado para la partida de QBO (' + Core.fmtUS(r.taken.iso) + ')'; it.selected = false; it.qboNote = 'Revisión manual: ' + it.dupFlag; return; }
+    used.add(r.txn.id); claim.set(r.txn.id, it);
+    if (r.ambiguous) { it.qboNote = 'Hay varias partidas en QBO con ese vendor y monto en fechas distintas: elige la fecha a mano'; return; }
+    it.qboTxn = r.txn.id; it.ed.date = Core.fmtUS(r.txn.iso); n++; const known = it.ex && it.ex.vendor && it.ex.vendor.known; if (known && it.conf !== 'alta') { it.conf = 'alta'; it.confUp = true; if (itemValid(it) && !dupHint(it)) it.selected = true; }
+    it.qboNote = (it.confUp && it.conf === 'alta' && it.confBase !== 'alta' ? 'Vendor y monto confirmados con QBO. ' : '') + 'Fecha del sistema (QBO): ' + Core.fmtUS(r.txn.iso) + (it.docIso && it.docIso !== r.txn.iso ? '; el documento dice ' + Core.fmtUS(it.docIso) : '') + (r.rank === 2 ? ' ⚠ solo hay un pago con ese monto, no el registro del costo: verifica' : '') + (r.crossMonth ? ' ⚠ cae en otro mes que el documento' : '') + (r.n > 1 ? ' (' + r.n + ' partidas con ese monto; se tomó la del mes/fecha más cercana)' : '') + (it.isCredit ? ' · par de la nota de crédito: ' + (r.txn.type || 'sin tipo') : ''); });
+  return n; }
 function itemCents(it) { return Core.parseMoney(it.ed.amt); }
 function itemIso(it) { return Core.parseUSDate(it.ed.date); }
 function itemVendor(it) { return Core.sanitizeVendor(Core.canonVendor(it.ed.vendor, S.vIndex)); }
 function itemValid(it) { const c = itemCents(it); return !!(itemVendor(it) && itemIso(it) && c != null && c > 0); }
 function finalName(it) { if (!itemValid(it)) return '<span class="src">— completa los campos —</span>'; return esc(Core.buildName(itemVendor(it), itemIso(it), itemCents(it), it.ext)); }
-function dupHint(it) { const v = itemVendor(it), iso = itemIso(it), c = itemCents(it); if (!v || !iso || c == null) return ''; const k = Core.normName(v);
-  const other = S.items.find(x => x.id !== it.id && x.status !== 'duplicado' && x.status !== 'error' && itemVendor(x) && Core.normName(itemVendor(x)) === k && itemIso(x) === iso && itemCents(x) === c);
+function dupHint(it) { if (it.dupFlag) return it.dupFlag; const v = itemVendor(it), iso = itemIso(it), c = itemCents(it); if (!v || !iso || c == null) return ''; const k = Core.normName(v);
+  const other = S.items.find(x => x.id !== it.id && x.status !== 'duplicado' && x.status !== 'error' && itemVendor(x) && Core.normName(itemVendor(x)) === k && itemIso(x) === iso && itemCents(x) === c && !!x.isCredit === !!it.isCredit);
   if (other) return 'Mismo vendor, fecha y monto que «' + other.name + '»';
+  const near = S.items.find(x => x.id !== it.id && x.status !== 'duplicado' && x.status !== 'error' && !!x.isCredit === !!it.isCredit && itemVendor(x) && Core.normName(itemVendor(x)) === k && itemCents(x) === c && itemIso(x) && Math.abs(Core.dayNum(itemIso(x)) - Core.dayNum(iso)) <= 3);
+  if (near) return 'Mismo vendor y monto que «' + near.name + '» con fecha a ' + Math.abs(Core.dayNum(itemIso(near)) - Core.dayNum(iso)) + ' día(s)';
   const reg = S.registry.entries.find(e => Core.normName(e.vendor) === k && e.date === iso && Math.round(e.amount * 100) === c); return reg ? 'Ya existe «' + reg.savedName + '» (' + reg.folder + ') con el mismo vendor, fecha y monto' : ''; }
 function statusHtml(it) { if (it.status === 'guardado') return `<span class="badge CONCILIADO">Guardado</span><div class="src">${esc(it.savedAs)}</div>`; if (it.status === 'duplicado') return `<span class="badge baja">Duplicado</span><div class="src">${esc(it.reason)}</div>`; if (it.status === 'error') return `<span class="badge baja">Error</span><div class="src">${esc(it.reason)}</div>`; const dh = dupHint(it); return (itemValid(it) ? '<span class="badge YA">Listo</span>' : '<span class="badge media">Falta dato</span>') + (dh ? `<div class="note">⚠ ${esc(dh)}: ¿duplicado? Si es otra factura, marca ✓ para guardarla (llevará sufijo _2)</div>` : ''); }
 function rowHtml(it) { const off = it.status !== 'pendiente'; const v = it.ed;
   return `<tr data-id="${it.id}" class="st-${it.status}${it.id === S.sel ? ' sel' : ''}"><td><input type="checkbox" class="chk" ${it.selected ? 'checked' : ''} ${off ? 'disabled' : ''}></td>
-  <td class="fn"><a href="#" class="view">${esc(it.name)}</a><div class="src">${esc(it.source ? 'Correo: ' + it.source.email : 'Archivo directo')}</div>${it.notes.map(n => `<div class="note">• ${esc(n)}</div>`).join('')}</td>
+  <td class="fn"><a href="#" class="view">${esc(it.name)}</a><div class="src">${esc(it.source ? (/^Drive/.test(it.source.email) ? it.source.email : 'Correo: ' + it.source.email) : 'Archivo directo')}</div>${it.notes.map(n => `<div class="note">• ${esc(n)}</div>`).join('')}${it.qboNote ? `<div class="note" style="color:var(--info)">• ${esc(it.qboNote)}</div>` : ''}</td>
   <td><input data-f="vendor" list="dlVendors" value="${esc(v.vendor)}" ${off ? 'disabled' : ''}></td>
   <td><input class="dt" data-f="date" placeholder="MM/DD/AAAA" value="${esc(v.date)}" ${off ? 'disabled' : ''}></td>
   <td><input class="amt" data-f="amt" list="dlA${it.id}" value="${esc(v.amt)}" ${off ? 'disabled' : ''}><datalist id="dlA${it.id}">${(it.alts || []).map(c => `<option value="${(c / 100).toFixed(2)}">`).join('')}</datalist></td>
@@ -628,10 +671,22 @@ function renderItems() { const tb = $('#itemsBody'); tb.innerHTML = S.items.leng
 function validateRowInputs(tr) { const it = S.items.find(x => x.id === +tr.dataset.id); if (!it || it.status !== 'pendiente') return;
   tr.querySelector('[data-f=vendor]').classList.toggle('invalid', !itemVendor(it)); tr.querySelector('[data-f=date]').classList.toggle('invalid', !itemIso(it)); const c = itemCents(it); tr.querySelector('[data-f=amt]').classList.toggle('invalid', !(c != null && c > 0)); }
 function updateCounters() { const pend = S.items.filter(i => i.status === 'pendiente'), sel = pend.filter(i => i.selected), ok = sel.filter(itemValid), saved = S.items.filter(i => i.status === 'guardado').length;
-  $('#counters').textContent = `${S.items.length} en lista · ${sel.length} seleccionados (${ok.length} válidos) · ${saved} guardados`; $('#btnSave').disabled = !S.root || !ok.length; $('#btnSave').title = S.root ? '' : 'Conecta primero la carpeta del Drive'; }
-$('#itemsBody').addEventListener('input', e => { const tr = e.target.closest('tr'); if (!tr || !e.target.dataset.f) return; const it = S.items.find(x => x.id === +tr.dataset.id); it.ed[e.target.dataset.f] = e.target.value; tr.querySelector('.final').innerHTML = finalName(it); tr.querySelector('.stt').innerHTML = statusHtml(it); validateRowInputs(tr); updateCounters(); });
-$('#itemsBody').addEventListener('change', e => { if (!e.target.classList.contains('chk')) return; const it = S.items.find(x => x.id === +e.target.closest('tr').dataset.id); it.selected = e.target.checked; updateCounters(); });
+  { const no = S.items.filter(i => i.status === 'pendiente' && i.needsOcr).length; const ob = $('#btnOcr'); if (ob && !OCRBUSY) { ob.textContent = 'Leer con OCR (' + no + ')'; ob.disabled = !no; } }
+  const nd = S.items.filter(i => i.status === 'duplicado' || (i.status === 'pendiente' && dupHint(i))).length; $('#counters').textContent = `${S.items.length} en lista · ${sel.length} seleccionados (${ok.length} válidos) · ${saved} guardados` + (nd ? ` · ⚠ ${nd} posible(s) duplicado(s): revisión manual` : ''); $('#btnSave').disabled = !S.root || !ok.length; $('#btnSave').title = S.root ? '' : 'Conecta primero la carpeta del Drive'; }
+$('#itemsBody').addEventListener('input', e => { const tr = e.target.closest('tr'); if (!tr || !e.target.dataset.f) return; const it = S.items.find(x => x.id === +tr.dataset.id); it.ed[e.target.dataset.f] = e.target.value; if (e.target.dataset.f === 'date') it.dateEdited = true; tr.querySelector('.final').innerHTML = finalName(it); tr.querySelector('.stt').innerHTML = statusHtml(it); validateRowInputs(tr); updateCounters(); });
+$('#itemsBody').addEventListener('change', e => { if (e.target.dataset && (e.target.dataset.f === 'vendor' || e.target.dataset.f === 'amt') && S.qbo) { applyQboDates(); renderItems(); return; } if (!e.target.classList.contains('chk')) return; const it = S.items.find(x => x.id === +e.target.closest('tr').dataset.id); it.selected = e.target.checked; updateCounters(); });
 $('#itemsBody').addEventListener('click', e => { const a = e.target.closest('a.view'); if (!a) return; e.preventDefault(); const it = S.items.find(x => x.id === +a.closest('tr').dataset.id); S.sel = it.id; $$('#itemsBody tr').forEach(r => r.classList.toggle('sel', +r.dataset.id === it.id)); showPreview(it); });
+let lbIt = null, lbZoom = 1;
+async function openLightbox(it) { if (!it) return; lbIt = it; lbZoom = 1; $('#lb').classList.add('on'); $('#lbT').textContent = it.name; const a = $('#lbA'); a.innerHTML = '<div class="src" style="color:#fff">Cargando…</div>';
+  try { if (it.kind === 'pdf') { const pdf = await pdfjsLib.getDocument({data: new Uint8Array(it.buf.slice(0))}).promise; a.innerHTML = ''; const n = Math.min(pdf.numPages, 8); for (let p = 1; p <= n; p++) { const page = await pdf.getPage(p); const vp = page.getViewport({scale: 2.2}); const c = document.createElement('canvas'); c.width = vp.width; c.height = vp.height; c.dataset.w = Math.round(vp.width / 2.2 * 1.6); await page.render({canvasContext: c.getContext('2d'), viewport: vp}).promise; a.appendChild(c); } if (pdf.numPages > n) a.insertAdjacentHTML('beforeend', '<div class="src" style="color:#fff">Se muestran las primeras ' + n + ' de ' + pdf.numPages + ' páginas</div>'); }
+    else { a.innerHTML = ''; const im = document.createElement('img'); im.src = URL.createObjectURL(new Blob([it.buf], {type: it.file.type || 'image/png'})); a.appendChild(im); }
+    lbApply(); } catch (e) { a.innerHTML = '<div class="alert err">No pude ampliar la vista: ' + esc(e.message) + '</div>'; } }
+function lbApply() { $('#lbZ').textContent = Math.round(lbZoom * 100) + '%'; $$('#lbA canvas').forEach(c => { c.style.width = Math.round(Math.min($('#lbA').clientWidth - 28, 1000) * lbZoom) + 'px'; }); $$('#lbA img').forEach(i => { i.style.width = Math.round(Math.min($('#lbA').clientWidth - 28, 1000) * lbZoom) + 'px'; i.style.maxWidth = 'none'; }); }
+function lbClose() { $('#lb').classList.remove('on'); $('#lbA').innerHTML = ''; }
+$('#lbX').onclick = lbClose; $('#lbPlus').onclick = () => { lbZoom = Math.min(3, lbZoom + .25); lbApply(); }; $('#lbMinus').onclick = () => { lbZoom = Math.max(.5, lbZoom - .25); lbApply(); };
+$('#lb').addEventListener('click', e => { if (e.target.id === 'lb' || e.target.id === 'lbA') lbClose(); });
+document.addEventListener('keydown', e => { if (e.key === 'Escape' && $('#lb').classList.contains('on')) lbClose(); });
+$('#pvBody').addEventListener('click', e => { if (e.target.closest('canvas,img')) openLightbox(S.items.find(x => x.id === S.sel)); });
 async function showPreview(it) { const b = $('#pvBody'); b.innerHTML = '<div class="src">Cargando…</div>';
   try { if (it.kind === 'pdf') { const pdf = await pdfjsLib.getDocument({data: new Uint8Array(it.buf.slice(0))}).promise; const page = await pdf.getPage(1); const vp = page.getViewport({scale: 1.4}); const c = document.createElement('canvas'); c.width = vp.width; c.height = vp.height; await page.render({canvasContext: c.getContext('2d'), viewport: vp}).promise; b.innerHTML = ''; b.appendChild(c); if (pdf.numPages > 1) b.insertAdjacentHTML('beforeend', `<div class="src">Página 1 de ${pdf.numPages}</div>`); }
     else { b.innerHTML = `<img alt="vista previa" src="${URL.createObjectURL(new Blob([it.buf], {type: it.file.type || 'image/png'}))}">`; } } catch (e) { b.innerHTML = '<div class="alert err">No pude mostrar la vista previa: ' + esc(e.message) + '</div>'; } }
@@ -643,14 +698,103 @@ $('#btnSave').onclick = async () => {
   try { await Drive.session(); const existing = new Set((await Drive.list(S.enProceso.id)).map(f => f.name.toLowerCase())); let ok = 0;
     for (const it of todo) { try { const vendor = itemVendor(it), iso = itemIso(it), cents = itemCents(it); let name = Core.buildName(vendor, iso, cents, it.ext); let k = 1;
         while (existing.has(name.toLowerCase())) { k++; name = Core.buildName(vendor, iso, cents, '').concat('_' + k, it.ext); }
-        const mime = it.file.type || 'application/octet-stream'; const up = await Drive.upload(S.enProceso.id, name, new Blob([it.buf], {type: mime}), mime);
-        if (+up.size !== it.buf.byteLength) { try { await Drive.trash(up.id); } catch (e2) {} throw new Error('El tamaño guardado en Drive no coincide con el original'); } existing.add(name.toLowerCase());
+        let up; if (it.driveId) { await Drive.rename(it.driveId, name); up = {id: it.driveId}; } else { const mime = it.file.type || 'application/octet-stream'; up = await Drive.upload(S.enProceso.id, name, new Blob([it.buf], {type: mime}), mime);
+        if (+up.size !== it.buf.byteLength) { try { await Drive.trash(up.id); } catch (e2) {} throw new Error('El tamaño guardado en Drive no coincide con el original'); } } existing.add(name.toLowerCase());
         const raw = it.ed.vendor.trim(); addVendorIfNew(vendor, raw);
-        S.registry.entries.push({hash: it.hash, originalName: it.name, savedName: name, vendor, date: iso, amount: cents / 100, source: it.source ? it.source.email : null, confidence: it.conf, edited: !!(it.ex && (Core.canonVendor(it.ed.vendor, S.vIndex) !== it.ex.vendor.name || Core.parseUSDate(it.ed.date) !== it.ex.date.iso || itemCents(it) !== it.ex.amount.cents)), savedAt: new Date().toISOString(), savedBy: S.cfg.operator || null, driveId: up.id, folder: 'En proceso', status: 'En proceso'});
-        it.status = 'guardado'; it.savedAs = name; it.selected = false; ok++; log(`Guardado: ${it.name}  →  En proceso/${name}`, 'o'); }
+        S.registry.entries.push({hash: it.hash, originalName: it.name, savedName: name, vendor, date: iso, amount: cents / 100, source: it.source ? it.source.email : null, gmailKey: it.source && it.source.key || undefined, confidence: it.conf, edited: !!(it.ex && (Core.canonVendor(it.ed.vendor, S.vIndex) !== it.ex.vendor.name || Core.parseUSDate(it.ed.date) !== it.ex.date.iso || itemCents(it) !== it.ex.amount.cents)), savedAt: new Date().toISOString(), savedBy: S.cfg.operator || null, driveId: up.id, folder: 'En proceso', status: 'En proceso'});
+        it.status = 'guardado'; it.savedAs = name; it.selected = false; ok++; log(it.driveId ? `Renombrado en Drive: ${it.name}  →  En proceso/${name}` : `Guardado: ${it.name}  →  En proceso/${name}`, 'o'); }
       catch (e) { it.status = 'error'; it.reason = e.message; log(`No se pudo guardar «${it.name}»: ${e.message}`, 'e'); } }
     rebuildIndex(); persistVendors(); renderVendors(); if (ok && !await saveRegistry()) log('ATENCIÓN: archivos guardados pero el registro no se pudo escribir en Drive. Pulsa «Releer carpeta» más tarde para reintentar.', 'e'); await refreshSupports(); log(`Resultado: ${ok} de ${todo.length} guardados en «En proceso».`, ok === todo.length ? 'o' : 'w'); }
   catch (e) { log('Error al guardar: ' + e.message, 'e'); } renderItems(); };
+
+/* ---------- OCR (Tesseract.js, se descarga solo al usarlo) ---------- */
+let OCRBUSY = false, ocrWorker = null;
+const OCR_JS = 'https://cdn.jsdelivr.net/npm/tesseract.js@5.1.1/dist/tesseract.min.js';
+async function ocrLoad(st) { if (!window.Tesseract) { st('Descargando el lector OCR (solo la primera vez)…'); await new Promise((res, rej) => { const sc = document.createElement('script'); sc.src = OCR_JS; sc.onload = res; sc.onerror = () => rej(new Error('No pude descargar el lector OCR (se requiere internet).')); document.head.appendChild(sc); }); }
+  if (!ocrWorker) { st('Preparando el OCR (descarga el idioma, ~10 MB, solo la primera vez)…'); ocrWorker = await Tesseract.createWorker('eng', 1, {logger: m => { if (m.status === 'recognizing text') st('Leyendo… ' + Math.round((m.progress || 0) * 100) + '%'); }}); }
+  return ocrWorker; }
+function ocrPrep(src, w, h, rot) { const maxW = 2400, minW = 1600; let sc = 1; const bw = rot % 180 ? h : w; if (bw > maxW) sc = maxW / bw; else if (bw < minW) sc = Math.min(2.5, minW / bw);
+  const cw = Math.round((rot % 180 ? h : w) * sc), ch = Math.round((rot % 180 ? w : h) * sc); const c = document.createElement('canvas'); c.width = cw; c.height = ch; const x = c.getContext('2d'); x.fillStyle = '#fff'; x.fillRect(0, 0, cw, ch); x.translate(cw / 2, ch / 2); x.rotate(rot * Math.PI / 180); x.drawImage(src, -w * sc / 2, -h * sc / 2, w * sc, h * sc); x.setTransform(1, 0, 0, 1, 0, 0);
+  const d = x.getImageData(0, 0, cw, ch), p = d.data, hist = new Uint32Array(256); for (let i = 0; i < p.length; i += 4) { const g = (p[i] * 0.299 + p[i + 1] * 0.587 + p[i + 2] * 0.114) | 0; p[i] = p[i + 1] = p[i + 2] = g; hist[g]++; }
+  const tot = cw * ch; let a = 0, lo = 0, hi = 255; for (let i = 0; i < 256; i++) { a += hist[i]; if (a > tot * 0.01) { lo = i; break; } } a = 0; for (let i = 255; i >= 0; i--) { a += hist[i]; if (a > tot * 0.2) { hi = i; break; } }
+  if (hi - lo > 30) for (let i = 0; i < p.length; i += 4) { const v = Math.max(0, Math.min(255, (p[i] - lo) * 255 / (hi - lo))); p[i] = p[i + 1] = p[i + 2] = v; } x.putImageData(d, 0, 0); return c; }
+async function ocrSource(it) { if (it.kind === 'pdf') { const pdf = await pdfjsLib.getDocument({data: new Uint8Array(it.buf.slice(0))}).promise; const page = await pdf.getPage(1); const vp = page.getViewport({scale: 2}); const c = document.createElement('canvas'); c.width = vp.width; c.height = vp.height; await page.render({canvasContext: c.getContext('2d'), viewport: vp}).promise; return {src: c, w: c.width, h: c.height}; }
+  const bmp = await createImageBitmap(new Blob([it.buf], {type: it.file.type || 'image/png'})); return {src: bmp, w: bmp.width, h: bmp.height}; }
+async function ocrItem(it, wk) { const o = await ocrSource(it); let best = null;
+  for (const rot of [0, 90, 270, 180]) { const r = await wk.recognize(ocrPrep(o.src, o.w, o.h, rot)); const conf = r.data.confidence || 0; if (!best || conf > best.conf) best = {conf, text: r.data.text || '', rot}; if (conf >= 60) break; }
+  const lines = best.text.split('\n').map(l => l.trim()).filter(Boolean); return {lines, conf: Math.round(best.conf), rot: best.rot}; }
+$('#btnOcr').onclick = async () => { const list = S.items.filter(i => i.status === 'pendiente' && i.needsOcr); if (!list.length || OCRBUSY) return; OCRBUSY = true; const b = $('#btnOcr'); b.disabled = true; const stEl = $('#procStatus'); const st = t => { stEl.textContent = t; }; let ok = 0;
+  try { const wk = await ocrLoad(st); let n = 0;
+    for (const it of list) { n++; try { st(`OCR ${n} de ${list.length}: ${it.name}`); const r = await ocrItem(it, wk);
+        if (r.lines.join('').replace(/\s/g, '').length < 20) { it.notes.push('OCR: no se reconoció texto suficiente. Captura los datos mirando la vista previa'); it.needsOcr = false; it.ocr = true; continue; }
+        const ex = Core.extractFields(r.lines, {vIndex: S.vIndex, ignoreKeys: ignoreKeys()}); it.ex = ex; it.lines = r.lines; it.ocr = true; it.needsOcr = false; it.notes = it.notes.filter(x => !/sin texto legible|Imagen: usa|OCR: no se reconoció/.test(x)); it.notes.push(...ex.notes);
+        it.notes.push(`Leído con OCR (confianza del lector ${r.conf}%${r.rot ? ', imagen girada ' + r.rot + '°' : ''}): verifica vendor, fecha y monto contra la vista previa`);
+        it.ed.vendor = ex.vendor.name || it.ed.vendor; it.ed.date = ex.date.iso ? Core.fmtUS(ex.date.iso) : it.ed.date; it.ed.amt = ex.amount.cents != null ? (ex.amount.cents / 100).toFixed(2) : it.ed.amt; it.alts = ex.amount.alts || [];
+        it.conf = 'baja'; it.confBase = 'baja'; it.confUp = false; it.docIso = undefined; it.selected = false; ok++; }
+      catch (e) { log(`OCR falló con «${it.name}»: ${e.message}`, 'e'); } }
+    log(`OCR: ${ok} de ${list.length} documento(s) leídos. Quedan SIN seleccionar: revisa cada uno contra la vista previa (el OCR puede equivocarse en montos y fechas).`, ok ? 'o' : 'w'); }
+  catch (e) { log('OCR: ' + e.message, 'e'); } finally { OCRBUSY = false; stEl.textContent = ''; applyQboDates(); renderItems(); } };
+
+/* ---------- traer lo subido a mano a Drive ---------- */
+$('#btnDriveIn').onclick = async () => { if (!S.root) { log('Conecta primero con Google Drive.', 'w'); return; } const b = $('#btnDriveIn'); b.disabled = true;
+  try { await Drive.session(); await refreshSupports(); const have = new Set(S.items.map(i => i.driveId).filter(Boolean));
+    const cand = S.nonStd.filter(f => f.dirId === S.enProceso.id && f.fid && !have.has(f.fid));
+    if (!cand.length) { log(S.cfg.fullScope ? 'No hay archivos nuevos con nombre no estándar en «En proceso».' : 'No encontré archivos nuevos. Con el acceso limitado la herramienta no ve lo subido a mano: activa «Acceso completo a Drive» en Conexión con Google y vuelve a conectar.', 'w'); return; }
+    const st = $('#procStatus'); let n = 0, added = 0;
+    for (const f of cand) { st.textContent = `Leyendo de Drive ${++n} de ${cand.length}: ${f.name}`;
+      try { const buf = await Drive.read(f.fid); const ext = extOf(f.name); const file = new File([buf], f.name, {type: ext === '.pdf' ? 'application/pdf' : 'image/' + (ext === '.jpg' ? 'jpeg' : ext.slice(1))}); const it = await buildItem(file, {email: 'Drive (subido a mano)'}); it.driveId = f.fid; it.notes.unshift('Archivo subido a mano a Drive: al guardar se renombra en su lugar'); S.items.push(it); added++; }
+      catch (e) { log(`No pude leer «${f.name}» de Drive: ${e.message}`, 'e'); } }
+    st.textContent = ''; applyQboDates(); renderItems(); log(`Se trajeron ${added} archivo(s) de Drive a la lista. Revisa y guarda para renombrarlos.`, added ? 'o' : 'w'); }
+  catch (e) { log('Error al leer Drive: ' + e.message, 'e'); } finally { b.disabled = false; $('#procStatus').textContent = ''; } };
+
+/* ---------- Gmail (solo lectura) ---------- */
+const GMAPI = 'https://gmail.googleapis.com/gmail/v1/users/me';
+const Gmail = { token: null, exp: 0,
+  ok() { return !!(this.token && Date.now() < this.exp - 120000); },
+  auth() { return new Promise((res, rej) => { if (!(window.google && google.accounts && google.accounts.oauth2)) return rej(new Error('No cargó el inicio de sesión de Google (se requiere internet). Recarga la página.'));
+    const cfg = {client_id: Drive.cid(), scope: 'https://www.googleapis.com/auth/gmail.readonly',
+      callback: r => { if (r.error) return rej(new Error('Google rechazó el acceso a Gmail: ' + (r.error_description || r.error))); this.token = r.access_token; this.exp = Date.now() + (+r.expires_in || 3600) * 1000; res(r.access_token); },
+      error_callback: e => rej(new Error('No se completó el permiso de Gmail (' + ((e && e.type) || 'cancelado') + ').'))};
+    if (S.cfg.email) cfg.login_hint = S.cfg.email; google.accounts.oauth2.initTokenClient(cfg).requestAccessToken({prompt: this.token === null ? 'consent' : ''}); }); },
+  async get(path, retried) { if (!this.ok()) await this.auth(); let r, delay = 600;
+    for (let k = 0; k < 4; k++) { r = await fetch(GMAPI + path, {headers: {Authorization: 'Bearer ' + this.token}}); if (r.status === 429 || r.status >= 500) { await sleep(delay); delay *= 2; continue; } break; }
+    if (r.status === 401 && !retried) { this.token = null; await this.auth(); return this.get(path, true); }
+    if (!r.ok) { let m = ''; try { const j = await r.json(); m = (j.error && j.error.message) || ''; } catch (e) {} const e = new Error(r.status === 403 ? 'Gmail rechazó la consulta (403). ' + (/not been used|disabled/i.test(m) ? 'Falta habilitar la «Gmail API» en el proyecto de Google Cloud.' : 'Revisa que la cuenta tenga el permiso de lectura de Gmail y que el alcance esté agregado en Google Cloud.') + (m ? ' [' + m + ']' : '') : 'Gmail respondió ' + r.status + (m ? ': ' + m : '')); e.status = r.status; throw e; }
+    return r.json(); } };
+const b64u = d => { const bin = atob(d.replace(/-/g, '+').replace(/_/g, '/')); const u = new Uint8Array(bin.length); for (let i = 0; i < bin.length; i++) u[i] = bin.charCodeAt(i); return u; };
+function gmWalk(part, out, ctx) { if (!part) return; const fn = part.filename || ''; const hs = part.headers || []; const inline = hs.some(h => /^content-id$/i.test(h.name)) && /inline/i.test((hs.find(h => /content-disposition/i.test(h.name)) || {}).value || 'inline');
+  if (fn && part.body && part.body.attachmentId) { const mt = (part.mimeType || '').toLowerCase(); const ext = extOf(fn); const isPdf = mt === 'application/pdf' || ext === '.pdf'; const isImg = mt.startsWith('image/') || IMG_EXT.includes(ext);
+    if (isPdf || isImg) out.push({...ctx, filename: fn, mime: isPdf ? 'application/pdf' : (mt.startsWith('image/') ? mt : 'image/png'), size: +part.body.size || 0, attId: part.body.attachmentId, isPdf, inline}); }
+  (part.parts || []).forEach(p => gmWalk(p, out, ctx)); }
+const hdr = (m, n) => ((((m.payload || {}).headers) || []).find(h => h.name.toLowerCase() === n) || {}).value || '';
+let gmRows = [];
+const gmPanel = $('#gmPanel');
+$('#btnGmail').onclick = () => { const on = gmPanel.style.display === 'none'; gmPanel.style.display = on ? '' : 'none'; if (!on) return; const p = S.period && S.period.from ? S.period : null; const t = new Date(), f = new Date(t.getFullYear(), t.getMonth(), 1);
+  const us = d => Core.fmtUS(Core.mkIso(d.getFullYear(), d.getMonth() + 1, d.getDate()));
+  gmPanel.innerHTML = `<h3 style="margin-top:0">Buscar adjuntos en Gmail</h3><div class="row"><label>Desde <input type="text" id="gmFrom" class="dt" placeholder="MM/DD/AAAA" value="${us(f)}"></label><label>Hasta <input type="text" id="gmTo" class="dt" placeholder="MM/DD/AAAA" value="${us(t)}"></label><label>Texto extra (remitente, asunto…) <input type="text" id="gmQ" placeholder="ej. from:ferguson"></label><label><input type="checkbox" id="gmAll"> Buscar en todo el correo (no solo Recibidos)</label><button class="btn" id="gmGo">Buscar</button></div><div class="src">Se usa la cuenta con la que conectaste Google. Busca correos con PDF o imagen adjuntos. Lo que venga solo en el cuerpo del correo o como enlace no se puede leer.</div><div id="gmRes"></div>`; };
+gmPanel.addEventListener('click', async e => { if (e.target.id === 'gmGo') gmSearch(); else if (e.target.id === 'gmAdd') gmAdd(); else if (e.target.id === 'gmAllChk') { $$('#gmRes .gmc').forEach(c => { if (!c.disabled) c.checked = e.target.checked; }); } });
+async function gmSearch() { const res = $('#gmRes'), fr = Core.parseUSDate($('#gmFrom').value), to = Core.parseUSDate($('#gmTo').value);
+  if (!fr || !to || fr > to) { res.innerHTML = '<div class="alert err">Revisa las fechas (MM/DD/AAAA, «Desde» no puede ser posterior a «Hasta»).</div>'; return; }
+  const ymd = iso => iso.replace(/-/g, '/'); const end = new Date(Date.UTC(+to.slice(0, 4), +to.slice(5, 7) - 1, +to.slice(8, 10) + 1)).toISOString().slice(0, 10);
+  const q = `has:attachment (filename:pdf OR filename:png OR filename:jpg OR filename:jpeg) after:${ymd(fr)} before:${ymd(end)}${$('#gmAll').checked ? '' : ' in:inbox'} ${$('#gmQ').value.trim()}`.trim();
+  $('#gmGo').disabled = true; res.innerHTML = '<div class="src">Buscando…</div>'; gmRows = [];
+  try { const ids = []; let pt = ''; do { const j = await Gmail.get(`/messages?q=${encodeURIComponent(q)}&maxResults=100${pt ? '&pageToken=' + pt : ''}`); (j.messages || []).forEach(m => ids.push(m.id)); pt = j.nextPageToken || ''; } while (pt && ids.length < 300);
+    if (!ids.length) { res.innerHTML = '<div class="alert warn">No hay correos con adjuntos PDF/imagen en ese rango. Búsqueda usada: <code>' + esc(q) + '</code></div>'; return; }
+    let i = 0, done = 0; const worker = async () => { while (i < ids.length) { const id = ids[i++]; try { const m = await Gmail.get(`/messages/${id}?format=full&fields=${encodeURIComponent('id,internalDate,payload(headers,filename,mimeType,body(attachmentId,size),parts)')}`); const ctx = {msgId: id, from: hdr(m, 'from'), subject: hdr(m, 'subject'), date: new Date(+m.internalDate).toISOString().slice(0, 10)}; const out = []; gmWalk(m.payload, out, ctx); out.forEach(o => gmRows.push(o)); } catch (er) { log('Gmail: no pude leer el correo ' + id + ': ' + er.message, 'e'); if (er.status === 403) throw er; } res.innerHTML = `<div class="src">Leyendo correos ${++done} de ${ids.length}…</div>`; } };
+    await Promise.all([worker(), worker(), worker(), worker()]);
+    const done0 = new Set(S.registry.entries.map(e => e.gmailKey).filter(Boolean)); const inList = new Set(S.items.map(it => it.source && it.source.key).filter(Boolean));
+    gmRows.forEach(r => { r.key = r.msgId + '|' + r.filename + '|' + r.size; r.already = done0.has(r.key) ? 'Ya guardado antes' : inList.has(r.key) ? 'Ya está en la lista' : ''; r.skip = !r.isPdf && (r.inline || r.size < 20480) ? 'Imagen pequeña (logo o firma)' : ''; });
+    gmRows.sort((a, b) => a.date < b.date ? 1 : -1); gmRender(q); }
+  catch (er) { res.innerHTML = '<div class="alert err">' + esc(er.message) + '</div>'; } finally { $('#gmGo').disabled = false; } }
+function gmRender(q) { const res = $('#gmRes'); const sz = n => n > 1048576 ? (n / 1048576).toFixed(1) + ' MB' : Math.round(n / 1024) + ' KB';
+  if (!gmRows.length) { res.innerHTML = '<div class="alert warn">Hay correos, pero ninguno con PDF o imagen utilizable.</div>'; return; }
+  res.innerHTML = `<div class="src">${gmRows.length} adjunto(s) encontrados. Búsqueda: <code>${esc(q)}</code></div><div style="max-height:260px;overflow:auto;margin:8px 0"><table><thead><tr><th><input type="checkbox" id="gmAllChk" checked></th><th>Fecha correo</th><th>De</th><th>Asunto</th><th>Archivo</th><th>Tamaño</th><th>Estado</th></tr></thead><tbody>` + gmRows.map((r, i) => `<tr><td><input type="checkbox" class="gmc" data-i="${i}" ${r.already || r.skip ? 'disabled' : 'checked'}></td><td>${esc(Core.fmtUS(r.date))}</td><td>${esc(r.from.replace(/<.*>/, '').trim() || r.from)}</td><td>${esc(r.subject)}</td><td>${esc(r.filename)}</td><td>${sz(r.size)}</td><td>${esc(r.already || r.skip || 'Nuevo')}</td></tr>`).join('') + `</tbody></table></div><button class="btn" id="gmAdd">Agregar seleccionados al proceso</button>`; }
+async function gmAdd() { const sel = $$('#gmRes .gmc:checked').map(c => gmRows[+c.dataset.i]); if (!sel.length) return; $('#gmAdd').disabled = true; const st = $('#procStatus'); let n = 0, ok = 0;
+  for (const r of sel) { st.textContent = `Descargando de Gmail ${++n} de ${sel.length}: ${r.filename}`;
+    try { const a = await Gmail.get(`/messages/${r.msgId}/attachments/${r.attId}`); const bytes = b64u(a.data); const name = /\.[a-z0-9]+$/i.test(r.filename) ? r.filename : r.filename + (r.isPdf ? '.pdf' : '.png');
+      const it = await buildItem(new File([bytes], name, {type: r.mime}), {email: (r.from.match(/<([^>]+)>/) || [0, r.from])[1], key: r.key, hint: `«${r.subject}» (correo del ${Core.fmtUS(r.date)})`}); S.items.push(it); r.already = 'Ya está en la lista'; ok++; }
+    catch (e) { log(`No pude descargar «${r.filename}» de Gmail: ${e.message}`, 'e'); } }
+  st.textContent = ''; applyQboDates(); renderItems(); log(`Gmail: ${ok} de ${sel.length} adjunto(s) agregados a la lista de proceso.`, ok === sel.length ? 'o' : 'w'); gmRender('(lista actual)'); }
 
 const drop = $('#drop'), fileIn = $('#fileIn');
 drop.addEventListener('click', () => fileIn.click()); fileIn.addEventListener('change', () => { addFiles(fileIn.files); fileIn.value = ''; });
@@ -663,7 +807,7 @@ drop.addEventListener('drop', e => addFiles(e.dataTransfer.files));
 async function refreshSupports() {
   S.supports = []; S.nonStd = []; if (!S.root) { $('#concSupports').textContent = 'Conecta con Google Drive para ver los soportes.'; return; }
   try { const allowed = ['.pdf', ...IMG_EXT]; const load = async (dirId, folder, locked) => { for (const f of await Drive.list(dirId)) { if (f.kind !== 'file' || !allowed.includes(extOf(f.name))) continue; const p = Core.parseName(f.name);
-      if (!p) { S.nonStd.push({name: f.name, folder}); continue; } S.supports.push({id: folder + '/' + f.name, name: f.name, folder, locked, vendor: p.vendor, iso: p.iso, cents: p.cents, fid: f.id, dirId}); } };
+      if (!p) { S.nonStd.push({name: f.name, folder, fid: f.id, dirId}); continue; } S.supports.push({id: folder + '/' + f.name, name: f.name, folder, locked, vendor: p.vendor, iso: p.iso, cents: p.cents, fid: f.id, dirId}); } };
     await load(S.enProceso.id, 'En proceso', false);
     for (const d of await Drive.list(S.root.id)) if (d.kind === 'directory' && /^Conciliados \d{2}-\d{4}$/.test(d.name)) await load(d.id, d.name, true); }
   catch (e) { log('No pude leer la carpeta de Drive: ' + e.message, 'e'); $('#concSupports').innerHTML = `<div class="alert err">No pude leer Drive: ${esc(e.message)}</div>`; return; }
@@ -672,13 +816,16 @@ async function refreshSupports() {
   $('#concSupports').innerHTML = `<b>${en}</b> soporte(s) en «En proceso» · <b>${lk}</b> ya conciliado(s) en carpetas «Conciliados MM-AAAA»` + (S.nonStd.length ? `<div class="alert warn">${S.nonStd.length} archivo(s) no siguen el formato <code>Vendor_MM-DD-AAAA_monto.ext</code> y se excluyen de la conciliación: ${S.nonStd.slice(0, 8).map(x => esc(x.folder + '/' + x.name)).join('; ')}${S.nonStd.length > 8 ? '…' : ''}</div>` : ''); }
 $('#btnRescan').onclick = async () => { try { await Drive.session(); await flushVendors(); await refreshRegistry(); } catch (e) { log('No pude sincronizar con Drive: ' + e.message, 'e'); } await refreshSupports(); log('Carpeta de Drive releída.'); };
 
-$('#xlsIn').onchange = async e => { const f = e.target.files[0]; e.target.value = ''; if (!f) return; $('#xlsName').textContent = f.name;
+async function loadQbo(f) { $('#xlsName').textContent = f.name; $('#xlsName2').textContent = f.name;
   try { if (typeof XLSX === 'undefined') throw new Error('No se cargó la librería de Excel (se requiere internet la primera vez)'); const wb = XLSX.read(await f.arrayBuffer(), {type: 'array'}); let pick = null;
     for (const sn of wb.SheetNames) { const rows = XLSX.utils.sheet_to_json(wb.Sheets[sn], {header: 1, raw: true, defval: null}); if (!rows.length) continue; const h = Core.findHeader(rows); if (h.complete) { pick = {sn, rows, h}; break; } if (!pick) pick = {sn, rows, h}; }
     if (!pick) throw new Error('El archivo no tiene datos');
-    S.qbo = {fileName: f.name, sheet: pick.sn, rows: pick.rows, hdrRow: pick.h.row, map: pick.h.map, complete: pick.h.complete, include: null}; S.result = null; parseQbo(); renderQbo(); $('#resultPanel').innerHTML = '';
+    S.qbo = {fileName: f.name, sheet: pick.sn, rows: pick.rows, hdrRow: pick.h.row, map: pick.h.map, complete: pick.h.complete, include: null}; S.period = {from: '', to: ''}; S.result = null; parseQbo(); renderQbo(); $('#resultPanel').innerHTML = '';
     log(`Excel «${f.name}» leído (hoja «${pick.sn}», encabezado en fila ${pick.h.row + 1}).`, 'o'); }
-  catch (err) { S.qbo = null; $('#xlsPanel').innerHTML = `<div class="alert err">No pude leer el archivo: ${esc(err.message)}</div>`; log('Error leyendo Excel: ' + err.message, 'e'); } };
+  catch (err) { S.qbo = null; $('#xlsPanel').innerHTML = `<div class="alert err">No pude leer el archivo: ${esc(err.message)}</div>`; log('Error leyendo Excel: ' + err.message, 'e'); }
+  const n = applyQboDates(); if (S.items.length && S.qbo && !S.qbo.err) log(`Fechas del sistema (QBO) aplicadas a ${n} de ${S.items.filter(i => i.status === 'pendiente').length} soporte(s) de la lista.`, n ? 'o' : 'w'); renderItems(); }
+$('#xlsIn').onchange = e => { const f = e.target.files[0]; e.target.value = ''; if (f) loadQbo(f); };
+$('#xlsIn2').onchange = e => { const f = e.target.files[0]; e.target.value = ''; if (f) loadQbo(f); };
 
 function parseQbo() { const q = S.qbo; q.err = null; const miss = ['date', 'vendor', 'amount'].filter(f => q.map[f] == null); if (miss.length) { q.err = 'Faltan columnas obligatorias: ' + miss.map(m => ({date: 'Fecha', vendor: 'Vendor/Name', amount: 'Monto'}[m])).join(', ') + '. Asígnalas manualmente abajo.'; q.txns = []; q.types = {}; return; }
   const r = Core.parseTxns(q.rows, q.hdrRow, q.map); q.all = r.txns; q.ignored = r.ignored; q.types = {}; r.txns.forEach(t => { const k = t.typeNorm || '(sin tipo)'; (q.types[k] = q.types[k] || {n: 0, c: 0, label: t.type || '(sin tipo)'}); q.types[k].n++; q.types[k].c += t.cents; });
@@ -692,23 +839,34 @@ function renderQbo() { const q = S.qbo; const hdr = q.rows[q.hdrRow] || []; cons
   if (q.ignored) h += `<div class="alert info">${q.ignored} fila(s) sin fecha o monto válidos (títulos, subtotales, totales) se ignoraron.</div>`;
   if (q.dupRows) h += `<div class="alert warn">${q.dupRows} fila(s) idénticas (misma fecha, tipo, número, vendor y monto): posible exportación duplicada. Se conservan; revísalas.</div>`;
   if (q.multiLine) h += `<div class="alert warn">${q.multiLine} transacción(es) aparecen en varias filas con el mismo número (posibles líneas de split). Si el reporte es detallado por línea, activa «Consolidar».</div>`;
+  const dts = q.all.filter(t => q.include.has(t.typeNorm || '(sin tipo)')).map(t => t.iso).sort(); const months = [...new Set(dts.map(d => d.slice(0, 7)))].sort().reverse().slice(0, 14);
+  if (dts.length) { const span = Core.dayNum(dts[dts.length - 1]) - Core.dayNum(dts[0]);
+    h += `<h3>Periodo a conciliar</h3><div class="row"><label>Desde <input type="text" id="perFrom" class="dt" placeholder="MM/DD/AAAA" value="${S.period.from ? Core.fmtUS(S.period.from) : ''}"></label><label>Hasta <input type="text" id="perTo" class="dt" placeholder="MM/DD/AAAA" value="${S.period.to ? Core.fmtUS(S.period.to) : ''}"></label><span class="src">Atajos:</span>${months.map(m => `<button class="lnk" data-per="${m}">${m.slice(5)}/${m.slice(0, 4)}</button>`).join(' ')}<button class="lnk" data-per="">Todo</button></div>`;
+    h += span > 62 && !S.period.from && !S.period.to ? `<div class="alert warn">El Excel abarca ${Core.fmtUS(dts[0])} a ${Core.fmtUS(dts[dts.length - 1])}. Elige el periodo (por ejemplo un mes) antes de conciliar; si no, todo lo que no tenga soporte aparecerá como pendiente.</div>` : `<small class="mute">Solo se concilian las transacciones del periodo; los soportes se consideran con 60 días de margen.</small>`; }
   h += `<div class="row" style="margin-top:10px"><label>Tolerancia de fecha (± días) <input type="text" id="tolIn" value="${S.tol}" style="width:60px"></label><label><input type="checkbox" id="consIn" ${S.consolidate ? 'checked' : ''}> Consolidar líneas con el mismo número</label><button class="btn" id="btnRun">Conciliar</button></div>`;
   $('#xlsPanel').innerHTML = h; }
 $('#xlsPanel').addEventListener('change', e => { const q = S.qbo; if (!q) return;
   if (e.target.dataset.map) { const v = e.target.value; q.map[e.target.dataset.map] = v === '' ? undefined : +v; if (v === '') delete q.map[e.target.dataset.map]; q.include = null; q.complete = ['date', 'vendor', 'amount'].every(f => q.map[f] != null); parseQbo(); renderQbo(); }
   else if (e.target.dataset.type != null) { e.target.checked ? q.include.add(e.target.dataset.type) : q.include.delete(e.target.dataset.type); }
+  else if (e.target.id === 'perFrom' || e.target.id === 'perTo') { const iso = Core.parseUSDate(e.target.value) || ''; if (e.target.value.trim() && !iso) { e.target.classList.add('invalid'); return; } e.target.classList.remove('invalid'); S.period[e.target.id === 'perFrom' ? 'from' : 'to'] = iso; renderQbo(); }
   else if (e.target.id === 'consIn') S.consolidate = e.target.checked; else if (e.target.id === 'tolIn') { const n = parseInt(e.target.value, 10); S.tol = Number.isFinite(n) && n >= 0 && n <= 30 ? n : 5; e.target.value = S.tol; } });
-$('#xlsPanel').addEventListener('click', e => { if (e.target.id === 'btnRun') runReconcile(); });
+$('#xlsPanel').addEventListener('click', e => { if (e.target.id === 'btnRun') runReconcile();
+  if (e.target.dataset && e.target.dataset.per != null && e.target.classList.contains('lnk')) { const m = e.target.dataset.per; if (!m) S.period = {from: '', to: ''}; else { const y = +m.slice(0, 4), mo = +m.slice(5, 7); S.period = {from: Core.mkIso(y, mo, 1), to: Core.mkIso(y, mo, new Date(y, mo, 0).getDate())}; } renderQbo(); } });
 
 async function runReconcile() {
   const q = S.qbo; if (!q || q.err) return; if (!S.root) { $('#resultPanel').innerHTML = '<div class="alert err">Conecta primero con Google Drive (botón arriba a la derecha).</div>'; return; }
   try { await Drive.session(); await refreshRegistry(); } catch (e) { $('#resultPanel').innerHTML = `<div class="alert err">No pude leer Drive: ${esc(e.message)}</div>`; return; }
-  await refreshSupports(); let tx = q.all.filter(t => q.include.has(t.typeNorm || '(sin tipo)')).map(t => ({...t}));
+  await refreshSupports(); const P0 = S.period || {}; let tx = q.all.filter(t => q.include.has(t.typeNorm || '(sin tipo)')).map(t => ({...t}));
+  if (P0.from && P0.to && P0.from > P0.to) { $('#resultPanel').innerHTML = '<div class="alert err">El periodo es inválido: «Desde» es posterior a «Hasta».</div>'; return; }
+  { const ds = tx.map(t => t.iso).sort(); if (ds.length && !P0.from && !P0.to && Core.dayNum(ds[ds.length - 1]) - Core.dayNum(ds[0]) > 62) { $('#resultPanel').innerHTML = '<div class="alert err">El Excel abarca más de dos meses. Elige el periodo a conciliar (arriba) y vuelve a pulsar «Conciliar».</div>'; return; } }
+  const shift = (iso, d) => { const x = new Date(iso + 'T00:00:00Z'); x.setUTCDate(x.getUTCDate() + d); return x.toISOString().slice(0, 10); };
+  if (P0.from) tx = tx.filter(t => t.iso >= P0.from); if (P0.to) tx = tx.filter(t => t.iso <= P0.to);
   if (!tx.length) { $('#resultPanel').innerHTML = '<div class="alert err">No hay transacciones de los tipos seleccionados.</div>'; return; }
   if (S.consolidate) tx = Core.consolidate(tx, S.vIndex);
   const prior = new Map(); S.registry.entries.forEach(en => { if (en.qbo && en.qbo.sig) prior.set(en.folder + '/' + en.savedName, en.qbo.sig); });
-  const supports = S.supports.map(s => ({...s})); const res = Core.reconcile(tx, supports, {tolDays: S.tol, reviewWindow: 45, vIndex: S.vIndex, prior});
-  res.pairs.forEach(p => { p.accept = p.status === 'CONCILIADO' && !p.s.locked; }); S.result = {res, tx, sum: Core.summarize(res, tx), tol: S.tol, ran: new Date()}; S.view = 'CONCILIADO'; renderResult();
+  let supports = S.supports.map(s => ({...s})); if (P0.from) supports = supports.filter(s => s.iso >= shift(P0.from, -60)); if (P0.to) supports = supports.filter(s => s.iso <= shift(P0.to, 60));
+  const res = Core.reconcile(tx, supports, {tolDays: S.tol, reviewWindow: 45, vIndex: S.vIndex, prior});
+  res.pairs.forEach(p => { p.accept = p.status === 'CONCILIADO' && !p.s.locked; }); S.result = {res, tx, sum: Core.summarize(res, tx), tol: S.tol, ran: new Date(), period: {...P0}}; S.view = 'CONCILIADO'; renderResult();
   log(`Conciliación: ${tx.length} transacciones vs ${supports.length} soportes → conciliadas ${S.result.sum.conc.n}, por revisar ${S.result.sum.rev.n}, pendientes ${S.result.sum.pend.n}, soportes sin transacción ${S.result.sum.sin.n}.`, S.result.sum.control ? 'o' : 'e'); }
 
 const LBL = {CONCILIADO: 'Conciliado', FECHA_FUERA: 'Fecha fuera de tolerancia', MONTO_DIF: 'Monto diferente', VENDOR_DIF: 'Vendor distinto', PENDIENTE: 'Pendiente de recibir', SIN_TXN: 'Soporte sin transacción'};
@@ -755,7 +913,7 @@ function markMoved(p, folder, name) { const sig = Core.sigOf(p.t, S.vIndex); let
 
 function buildReportBytes() { const R = S.result, res = R.res, s = R.sum, m = c => c / 100, wb = XLSX.utils.book_new(); const q = S.qbo;
   const sheet = (name, rows, moneyCols, widths) => { const ws = XLSX.utils.aoa_to_sheet(rows); rows.forEach((r, ri) => r.forEach((v, ci) => { if (typeof v === 'number' && (moneyCols || []).includes(ci)) { const c = ws[XLSX.utils.encode_cell({r: ri, c: ci})]; if (c) c.z = '#,##0.00'; } })); ws['!cols'] = (widths || []).map(w => ({wch: w})); XLSX.utils.book_append_sheet(wb, ws, name); };
-  sheet('Resumen', [['Reporte de conciliación de soportes · Mi Empresa HVAC'], [], ['Generado', R.ran.toLocaleString('en-US')], ['Archivo QBO', q.fileName], ['Hoja / fila de encabezado', `${q.sheet} / ${q.hdrRow + 1}`], ['Tipos incluidos', [...q.include].join(', ')], ['Tolerancia de fecha (± días)', R.tol], ['Ventana de revisión por fecha (días)', 45], ['Consolidar líneas', S.consolidate ? 'Sí' : 'No'], [],
+  sheet('Resumen', [['Reporte de conciliación de soportes · Mi Empresa HVAC'], [], ['Generado', R.ran.toLocaleString('en-US')], ['Archivo QBO', q.fileName], ['Hoja / fila de encabezado', `${q.sheet} / ${q.hdrRow + 1}`], ['Tipos incluidos', [...q.include].join(', ')], ['Periodo conciliado', R.period && (R.period.from || R.period.to) ? `${R.period.from ? Core.fmtUS(R.period.from) : '…'} a ${R.period.to ? Core.fmtUS(R.period.to) : '…'}` : 'Todo el Excel'], ['Tolerancia de fecha (± días)', R.tol], ['Ventana de revisión por fecha (días)', 45], ['Consolidar líneas', S.consolidate ? 'Sí' : 'No'], [],
     ['Concepto', 'Cantidad', 'Monto USD'], ['Transacciones QBO analizadas', s.total.n, m(s.total.c)], ['Conciliadas', s.conc.n, m(s.conc.c)], ['   de las cuales de corridas previas', s.conc.prev, ''], ['Por revisar', s.rev.n, m(s.rev.c)], ['Pendientes de recibir', s.pend.n, m(s.pend.c)], ['Soportes sin transacción en QBO', s.sin.n, m(s.sin.c)], [],
     ['Control: QBO = Conciliado + Por revisar + Pendiente', s.control ? 'CUADRA' : 'NO CUADRA', m(s.total.c - s.conc.c - s.rev.c - s.pend.c)]], [2], [52, 18, 16]);
   const pr = p => [LBL[p.status] + (p.s.locked ? ' (ya conciliado)' : ''), Core.fmtUS(p.t.iso), p.t.type, p.t.num, p.t.vendor, m(p.t._abs), p.s.name, p.s.folder, Core.fmtUS(p.s.iso), m(p.s._abs), p.dsd, m(p.dc), p.accept ? 'Sí' : (p.s.locked ? '' : 'No'), p.why, p.t.rowNum];
@@ -802,6 +960,12 @@ $('#helpBody').innerHTML = `
 <li>Montos en el nombre del archivo van sin separador de miles (ej. <code>1250.00</code>) y fechas con guiones (los diagonales no son válidos en nombres).</li></ul>
 <h3>Evidencia que queda documentada</h3>
 <ul><li><code>_Control/registro_soportes.json</code>: cada soporte, su origen, si fue editado a mano y su partida de QBO.</li><li><code>_Control/Reportes/Conciliacion_*.xlsx</code>: reporte de cada movimiento. La bitácora de esta pantalla muestra cada acción.</li></ul>
+<h3>Archivos subidos directamente a Drive</h3>
+<p>La herramienta usa <b>acceso completo a Drive</b> (se aplica al abrir esta versión; la primera vez Google pedirá permiso de nuevo). Si alguien sube un PDF o imagen a mano a «En proceso», pulsa <b>«Traer lo subido a mano a Drive»</b> en Procesar: se lee, se propone vendor/fecha/monto y, al guardar, el archivo <b>se renombra en su lugar</b> (no se copia ni se duplica). Si quitas el acceso completo en Configuración, la herramienta solo verá lo que ella misma subió.</p>
+<h3>PDF escaneados y fotos (OCR)</h3>
+<p>El botón <b>«Leer con OCR (n)»</b> (Procesar) lee con reconocimiento de texto los PDF que son imagen y las fotos. La primera vez descarga el lector (~10 MB) y tarda unos segundos por documento; todo ocurre en tu navegador. El resultado <b>siempre queda sin seleccionar y con certeza baja</b>: verifica vendor, fecha y monto contra la vista previa. Funciona bien con capturas y escaneos nítidos; las fotos de celular torcidas, oscuras o con arrugas suelen leerse mal y se capturan a mano. Si cargaste el Excel de QBO y vendor y monto coinciden exactamente con una partida, la herramienta lo confirma y lo marca.</p>
+<h3>Buscar adjuntos en Gmail</h3>
+<p>El botón <b>«Buscar adjuntos en Gmail»</b> (Procesar) busca, en la cuenta conectada, correos con PDF o imágenes adjuntas entre dos fechas (por defecto solo Recibidos; puedes añadir texto como <code>from:ferguson</code>). Muestra la lista; tú eliges cuáles agregar y entran al mismo proceso (lectura, fecha QBO, duplicados, guardado y conciliación). Es de <b>solo lectura</b>: no marca, mueve ni borra correos. Un adjunto ya guardado antes se marca «Ya guardado antes». Facturas que vienen solo en el cuerpo del correo o como enlace no se pueden leer: guárdalas como PDF. Requiere habilitar la <b>Gmail API</b> y agregar el permiso <code>gmail.readonly</code> en Google Cloud (ver guía).</p>
 <h3>Privacidad</h3>
 <p>Los documentos se leen en tu navegador y solo se guardan en la carpeta de Drive de la cuenta de resguardo; no pasan por ningún otro servidor. Se descargan de internet las librerías de lectura de PDF, Excel y el inicio de sesión de Google. Con el permiso «drive.file» la herramienta solo ve los archivos que ella misma crea. Las facturas pueden traer datos bancarios: no compartas la carpeta ni la contraseña de la cuenta. Si compartes esta herramienta, la tabla de vendors o los reportes fuera del equipo, anonimiza vendors y montos.</p>`;
 
@@ -824,6 +988,17 @@ function runSelfTest() { const T = Core, rows = []; const chk = (name, got, exp)
   const sm = T.summarize(r, tx); chk('Suma conciliada USD', T.money(sm.conc.c), '1,920.47'); chk('Suma por revisar USD', T.money(sm.rev.c), '917.50'); chk('Suma pendiente USD', T.money(sm.pend.c), '2,099.00'); chk('Control de suma (QBO = conc + rev + pend)', sm.control, true);
   const rows2 = [['Mi Empresa HVAC'], ['Transaction List by Date'], [], ['Date', 'Transaction Type', 'Num', 'Name', 'Memo/Description', 'Amount'], ['10/15/2026', 'Bill', '1001', 'ABC Supply', 'x', '1,250.00'], [46300, 'Expense', '', 'Cool Parts LLC', '', -482.37], ['Total', '', '', '', '', 1732.37]]; const h = T.findHeader(rows2); const pt = T.parseTxns(rows2, h.row, h.map);
   chk('Excel: fila de encabezado detectada', h.row, 3); chk('Excel: filas válidas (ignora títulos y total)', pt.txns.length, 2); chk('Excel: monto negativo → valor absoluto', pt.txns[1] && pt.txns[1].cents, 48237); chk('Excel: fecha de Excel (serial 46300)', pt.txns[1] && pt.txns[1].iso, '2026-10-05');
+  { const vi2 = T.buildVendorIndex({vendors: [{name: 'Walmart', aliases: []}, {name: 'Victory Transport & Crane Services', aliases: []}, {name: 'OpenAI', aliases: ['OpenAI OpCo']}]}), c2 = {vIndex: vi2, ignoreKeys: ['mi empresa']};
+    let e2 = T.extractFields(['Walmart', 'ST# 04451', 'SUBTOTAL', '39.26', 'TAX1', '8.5500%', '3.36', 'TOTAL', '42.62', 'VISA', 'TEND', '42.62', 'CHANGE', 'DUE', '0.00', '09/19/2026'], c2);
+    chk('Recibo: «TOTAL» solo en una línea y monto en la siguiente', e2.amount.cents, 4262); chk('Recibo: monto con etiqueta se marca alta', e2.amount.conf, 'alta');
+    e2 = T.extractFields(['523841', 'Invoice', 'Mi Empresa', 'VICTORY   TRANSPORT', '&   CRANE', 'DESCRIPTION', '09.24.26', 'VICTORY', 'TRANSPORT', '& CRANE', 'SERVICES', '8401 NORTH 87 AVE'], c2);
+    chk('Vendor partido en varias líneas se reconoce', e2.vendor.name, 'Victory Transport & Crane Services');
+    e2 = T.extractFields(['Invoice', 'Purchase Profile PP-CDCX3OOA-0001', 'OpenAI OpCo, LLC Bill to Ship to', 'Invoice date October 1, 2026', 'Amount due $76.08 USD'], c2);
+    chk('Alias reconoce razón social (OpenAI OpCo → OpenAI)', e2.vendor.name, 'OpenAI');
+    e2 = T.extractFields(['FERGUSON', 'SUBTOTAL', 'INBOUND FREIGHT', 'TAX', 'LESS DEPOSIT   TOTAL DUE', '134.91', '11.20   0.00', '146.11', 'PAID $146.11', 'Date: 09/04/2026'], {vIndex: T.buildVendorIndex({vendors: []}), ignoreKeys: []});
+    chk('Encabezado de varias columnas con «PAID $x»: toma el monto pagado', [e2.amount.cents, e2.amount.conf].join(), '14611,alta');
+    e2 = T.extractFields(['Attn: Juan Perez', 'Branch: 1039', 'Acme Parts Inc.', 'Total Due $10.00', 'Date: 10/01/2026'], {vIndex: T.buildVendorIndex({vendors: []}), ignoreKeys: []});
+    chk('Vendor: omite «Attn:» y «Branch:» al proponer la primera línea', e2.vendor.name, 'Acme Parts Inc.'); }
   { const A = {hash: 'h1', savedName: 'A_10-01-2026_1.00.pdf', folder: 'En proceso', savedAt: '2026-10-01T10:00:00Z'}, A2 = {...A, folder: 'Conciliados 10-2026', movedAt: '2026-10-05T10:00:00Z', operator: 'x'}, B = {hash: 'h2', savedName: 'B.pdf', folder: 'En proceso', savedAt: '2026-10-02T10:00:00Z'}, C = {hash: 'h3', savedName: 'C.pdf', folder: 'En proceso', savedAt: '2026-10-03T10:00:00Z'};
     let m = T.mergeRegistry({entries: [A2, B]}, {entries: [A, C]}); chk('Registro: une entradas de dos sesiones', m.entries.length, 3); chk('Registro: gana la versión más reciente (movido)', m.entries.find(x => x.hash === 'h1').folder, 'Conciliados 10-2026');
     m = T.mergeRegistry({entries: [A]}, {entries: [A2]}); chk('Registro: local más nuevo sobre remoto', m.entries[0].folder, 'Conciliados 10-2026'); m = T.mergeRegistry(null, null); chk('Registro: vacío', m.entries.length, 0);
@@ -834,7 +1009,7 @@ $('#btnSelfTest').onclick = runSelfTest; window.__runSelfTest = runSelfTest; win
 /* ---------- arranque ---------- */
 (function init() {
   try { const v = JSON.parse(localStorage.getItem('soportes.vendors.v1') || 'null'); if (v && Array.isArray(v.vendors)) { S.vendors = {vendors: v.vendors}; if (v.ignore != null) S.ignore = v.ignore; } } catch (e) {}
-  try { const c = JSON.parse(localStorage.getItem(CFG_KEY) || 'null'); if (c && typeof c === 'object') Object.assign(S.cfg, c); } catch (e) {}
+  try { const c = JSON.parse(localStorage.getItem(CFG_KEY) || 'null'); if (c && typeof c === 'object') { Object.assign(S.cfg, c); if (!c.scopeV) { S.cfg.fullScope = true; S.cfg.scopeV = 2; S.cfg.rootId = null; saveCfg(); } } } catch (e) {}
   $('#cfgClient').value = S.cfg.clientId || GOOGLE_CLIENT_ID; $('#cfgRoot').value = S.cfg.rootName; $('#cfgOp').value = S.cfg.operator || ''; $('#cfgFull').checked = !!S.cfg.fullScope;
   rebuildIndex(); renderVendors(); renderFolder(); renderItems();
   const miss = []; if (typeof pdfjsLib === 'undefined') miss.push('lectura de PDF (pdf.js)'); if (typeof XLSX === 'undefined') miss.push('lectura/escritura de Excel (SheetJS)');
