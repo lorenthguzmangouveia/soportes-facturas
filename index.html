@@ -55,8 +55,11 @@ tr.sel td{background:#f3f7fd}
 tr.st-guardado td{background:#f1faf4}tr.st-duplicado td,tr.st-error td{background:#fff6f6}
 .final{font-family:Consolas,monospace;font-size:12px;word-break:break-all;color:#2b3a55}
 .empty{text-align:center;color:var(--mute);padding:22px}
-#preview{position:sticky;top:10px}
-#preview canvas,#preview img{max-width:100%;border:1px solid var(--line);border-radius:6px;cursor:zoom-in}
+#preview,#preview2{position:sticky;top:10px}
+#pdTbl td.final{min-width:150px;word-break:break-all;font-family:ui-monospace,Menlo,Consolas,monospace;font-size:12px}
+#pdTbl [data-f=vendor]{min-width:150px}
+#pdTbl .stt{min-width:210px}
+#preview canvas,#preview img,#preview2 canvas,#preview2 img{max-width:100%;border:1px solid var(--line);border-radius:6px;cursor:zoom-in}
 #lb{position:fixed;inset:0;background:rgba(0,0,0,.82);z-index:1000;display:none;flex-direction:column}
 #lb.on{display:flex}
 #lb .bar{display:flex;gap:10px;align-items:center;padding:8px 14px;color:#fff;font-size:13px}
@@ -98,6 +101,7 @@ small.mute{color:var(--mute)}
   <div class="wrap"><nav class="tabs" id="tabs">
     <button data-tab="proc" class="on">1. Procesar soportes</button>
     <button data-tab="conc">2. Conciliar con QBO</button>
+    <button data-tab="pend">3. Pendientes en Drive</button>
     <button data-tab="vend">Vendors</button>
     <button data-tab="help">Instrucciones y autoprueba</button>
   </nav></div>
@@ -118,7 +122,7 @@ small.mute{color:var(--mute)}
 <section id="tab-proc">
   <div class="card">
     <h2>Cargar soportes</h2>
-    <div class="row" style="margin-bottom:10px"><button class="btn sec" id="btnDriveIn" title="Trae a la lista los PDF/imágenes que se subieron a mano a «En proceso»">Traer lo subido a mano a Drive</button><button class="btn sec" id="btnOcr" disabled title="Lee con OCR los PDF escaneados y las fotos de la lista">Leer con OCR (0)</button><button class="btn sec" id="btnGmail">Buscar adjuntos en Gmail</button><span class="src">Gmail: solo lectura; no marca, mueve ni borra correos.</span></div>
+    <div class="row" style="margin-bottom:10px"><button class="btn sec" id="btnOcr" disabled title="Lee con OCR los PDF escaneados y las fotos de la lista">Leer con OCR (0)</button><button class="btn sec" id="btnGmail">Buscar adjuntos en Gmail</button><span class="src">Gmail: solo lectura; no marca, mueve ni borra correos.</span></div>
     <div id="gmPanel" class="card" style="display:none;margin-bottom:10px"></div>
     <div class="row" style="margin-bottom:10px"><label class="btn sec">Cargar Excel de QBO (opcional)<input type="file" id="xlsIn2" accept=".xlsx,.xls,.csv" hidden></label><span id="xlsName2" class="src">Con el Excel de QBO la herramienta toma la <b>fecha del sistema</b> (la del registro del costo o gasto) para nombrar cada soporte.</span></div>
     <div class="drop" id="drop">
@@ -142,10 +146,40 @@ small.mute{color:var(--mute)}
         </table>
       </div>
     </div>
-    <div id="lb" role="dialog" aria-label="Vista ampliada"><div class="bar"><span class="t" id="lbT"></span><button id="lbMinus" title="Alejar">−</button><span id="lbZ">100%</span><button id="lbPlus" title="Acercar">+</button><button id="lbX">Cerrar (Esc)</button></div><div class="area" id="lbA"></div></div>
     <div class="card" id="preview"><h2>Vista previa</h2><div id="pvBody" class="src">Haz clic en el nombre de un archivo para verlo aquí; haz clic en la vista previa para ampliarla.</div></div>
   </div>
   <datalist id="dlVendors"></datalist>
+</section>
+
+<div id="lb" role="dialog" aria-label="Vista ampliada"><div class="bar"><span class="t" id="lbT"></span><button id="lbMinus" title="Alejar">−</button><span id="lbZ">100%</span><button id="lbPlus" title="Acercar">+</button><button id="lbX">Cerrar (Esc)</button></div><div class="area" id="lbA"></div></div>
+
+<!-- ============ TAB 3 · PENDIENTES EN DRIVE ============ -->
+<section id="tab-pend" hidden>
+  <div class="card">
+    <h2>Pendientes por conciliar en Drive</h2>
+    <div class="row" style="margin-bottom:8px"><button class="btn" id="pdLoad">Consultar Drive</button><button class="btn sec" id="pdOcr" disabled title="Lee con OCR los archivos sin texto">Leer con OCR (0)</button><span class="src" id="pdStatus"></span></div>
+    <div id="pdInfo" class="src">Trae los archivos que están en «En proceso» (no conciliados). Aquí puedes corregir vendor, fecha y monto, marcar complementos, ver la vista previa y mandar duplicados a «_Duplicados», sin subir nada.</div>
+  </div>
+  <div class="grid2">
+    <div class="card" style="padding:0">
+      <div class="row" style="padding:12px 14px">
+        <button class="btn" id="pdApply" disabled>Aplicar cambios en Drive (0)</button>
+        <button class="btn sec" id="pdDup" disabled>Mover a «_Duplicados» (0)</button>
+        <button class="btn sec" id="pdSelAll">Seleccionar los visibles</button>
+        <button class="btn sec" id="pdSelNone">Quitar selección</button>
+        <label>Mostrar <select id="pdFilter"><option value="all">Todos</option><option value="review">Por revisar / sin transacción</option><option value="nonstd">Nombre no estándar</option><option value="dirty">Con cambios sin aplicar</option><option value="dup">Posibles duplicados</option></select></label>
+        <input type="text" id="pdQ" placeholder="Buscar vendor o archivo" style="max-width:200px">
+        <span class="src" id="pdCounters"></span>
+      </div>
+      <div class="tblwrap" style="border:0;border-top:1px solid var(--line);border-radius:0">
+        <table id="pdTbl">
+          <thead><tr><th></th><th>Archivo en Drive</th><th>Vendor</th><th>Fecha (MM/DD/AAAA)</th><th class="num">Monto USD</th><th>Nombre final</th><th>Estatus</th></tr></thead>
+          <tbody id="pdBody"><tr><td colspan="7" class="empty">Pulsa «Consultar Drive» para traer los archivos pendientes.</td></tr></tbody>
+        </table>
+      </div>
+    </div>
+    <div class="card" id="preview2"><h2>Vista previa</h2><div id="pvBody2" class="src">Haz clic en el nombre de un archivo para verlo aquí; haz clic en la vista previa para ampliarla.</div></div>
+  </div>
 </section>
 
 <!-- ============ TAB 2 ============ -->
@@ -529,7 +563,7 @@ function addVendorIfNew(name, alias) { name = String(name || '').trim(); if (!na
   if (alias && Core.normName(alias) !== Core.normName(v.name) && !(v.aliases || []).some(a => Core.normName(a) === Core.normName(alias))) { v.aliases = v.aliases || []; v.aliases.push(alias); } return true; }
 
 /* ---------- pestañas ---------- */
-$('#tabs').addEventListener('click', e => { const b = e.target.closest('button'); if (!b) return; $$('#tabs button').forEach(x => x.classList.toggle('on', x === b)); ['proc', 'conc', 'vend', 'help'].forEach(t => $('#tab-' + t).hidden = t !== b.dataset.tab); });
+$('#tabs').addEventListener('click', e => { const b = e.target.closest('button'); if (!b) return; $$('#tabs button').forEach(x => x.classList.toggle('on', x === b)); ['proc', 'conc', 'pend', 'vend', 'help'].forEach(t => $('#tab-' + t).hidden = t !== b.dataset.tab); });
 
 /* ---------- conexión con Google Drive ---------- */
 const saveCfg = () => { try { localStorage.setItem(CFG_KEY, JSON.stringify(S.cfg)); } catch (e) {} };
@@ -683,7 +717,7 @@ $('#itemsBody').addEventListener('change', e => { if (e.target.dataset && (e.tar
 $('#itemsBody').addEventListener('click', e => { const a = e.target.closest('a.view'); if (!a) return; e.preventDefault(); const it = S.items.find(x => x.id === +a.closest('tr').dataset.id); S.sel = it.id; $$('#itemsBody tr').forEach(r => r.classList.toggle('sel', +r.dataset.id === it.id)); showPreview(it); });
 let lbIt = null, lbZoom = 1;
 async function openLightbox(it) { if (!it) return; lbIt = it; lbZoom = 1; $('#lb').classList.add('on'); $('#lbT').textContent = it.name; const a = $('#lbA'); a.innerHTML = '<div class="src" style="color:#fff">Cargando…</div>';
-  try { if (it.kind === 'pdf') { const pdf = await pdfjsLib.getDocument({data: new Uint8Array(it.buf.slice(0))}).promise; a.innerHTML = ''; const n = Math.min(pdf.numPages, 8); for (let p = 1; p <= n; p++) { const page = await pdf.getPage(p); const vp = page.getViewport({scale: 2.2}); const c = document.createElement('canvas'); c.width = vp.width; c.height = vp.height; c.dataset.w = Math.round(vp.width / 2.2 * 1.6); await page.render({canvasContext: c.getContext('2d'), viewport: vp}).promise; a.appendChild(c); } if (pdf.numPages > n) a.insertAdjacentHTML('beforeend', '<div class="src" style="color:#fff">Se muestran las primeras ' + n + ' de ' + pdf.numPages + ' páginas</div>'); }
+  try { await ensureBuf(it); if (it.kind === 'pdf') { const pdf = await pdfjsLib.getDocument({data: new Uint8Array(it.buf.slice(0))}).promise; a.innerHTML = ''; const n = Math.min(pdf.numPages, 8); for (let p = 1; p <= n; p++) { const page = await pdf.getPage(p); const vp = page.getViewport({scale: 2.2}); const c = document.createElement('canvas'); c.width = vp.width; c.height = vp.height; c.dataset.w = Math.round(vp.width / 2.2 * 1.6); await page.render({canvasContext: c.getContext('2d'), viewport: vp}).promise; a.appendChild(c); } if (pdf.numPages > n) a.insertAdjacentHTML('beforeend', '<div class="src" style="color:#fff">Se muestran las primeras ' + n + ' de ' + pdf.numPages + ' páginas</div>'); }
     else { a.innerHTML = ''; const im = document.createElement('img'); im.src = URL.createObjectURL(new Blob([it.buf], {type: it.file.type || 'image/png'})); a.appendChild(im); }
     lbApply(); } catch (e) { a.innerHTML = '<div class="alert err">No pude ampliar la vista: ' + esc(e.message) + '</div>'; } }
 function lbApply() { $('#lbZ').textContent = Math.round(lbZoom * 100) + '%'; $$('#lbA canvas').forEach(c => { c.style.width = Math.round(Math.min($('#lbA').clientWidth - 28, 1000) * lbZoom) + 'px'; }); $$('#lbA img').forEach(i => { i.style.width = Math.round(Math.min($('#lbA').clientWidth - 28, 1000) * lbZoom) + 'px'; i.style.maxWidth = 'none'; }); }
@@ -692,8 +726,8 @@ $('#lbX').onclick = lbClose; $('#lbPlus').onclick = () => { lbZoom = Math.min(3,
 $('#lb').addEventListener('click', e => { if (e.target.id === 'lb' || e.target.id === 'lbA') lbClose(); });
 document.addEventListener('keydown', e => { if (e.key === 'Escape' && $('#lb').classList.contains('on')) lbClose(); });
 $('#pvBody').addEventListener('click', e => { if (e.target.closest('canvas,img')) openLightbox(S.items.find(x => x.id === S.sel)); });
-async function showPreview(it) { const b = $('#pvBody'); b.innerHTML = '<div class="src">Cargando…</div>';
-  try { if (it.kind === 'pdf') { const pdf = await pdfjsLib.getDocument({data: new Uint8Array(it.buf.slice(0))}).promise; const page = await pdf.getPage(1); const vp = page.getViewport({scale: 1.4}); const c = document.createElement('canvas'); c.width = vp.width; c.height = vp.height; await page.render({canvasContext: c.getContext('2d'), viewport: vp}).promise; b.innerHTML = ''; b.appendChild(c); if (pdf.numPages > 1) b.insertAdjacentHTML('beforeend', `<div class="src">Página 1 de ${pdf.numPages}</div>`); }
+async function showPreview(it, tgt) { const b = $(tgt || '#pvBody'); b.innerHTML = '<div class="src">Cargando…</div>';
+  try { await ensureBuf(it); if (it.kind === 'pdf') { const pdf = await pdfjsLib.getDocument({data: new Uint8Array(it.buf.slice(0))}).promise; const page = await pdf.getPage(1); const vp = page.getViewport({scale: 1.4}); const c = document.createElement('canvas'); c.width = vp.width; c.height = vp.height; await page.render({canvasContext: c.getContext('2d'), viewport: vp}).promise; b.innerHTML = ''; b.appendChild(c); if (pdf.numPages > 1) b.insertAdjacentHTML('beforeend', `<div class="src">Página 1 de ${pdf.numPages}</div>`); }
     else { b.innerHTML = `<img alt="vista previa" src="${URL.createObjectURL(new Blob([it.buf], {type: it.file.type || 'image/png'}))}">`; } } catch (e) { b.innerHTML = '<div class="alert err">No pude mostrar la vista previa: ' + esc(e.message) + '</div>'; } }
 $('#btnSelOk').onclick = () => { S.items.forEach(i => { if (i.status === 'pendiente') i.selected = i.conf === 'alta' && itemValid(i) && !dupHint(i); }); renderItems(); };
 $('#btnClean').onclick = () => { S.items = S.items.filter(i => i.status !== 'guardado'); renderItems(); };
@@ -728,10 +762,10 @@ function ocrPrep(src, w, h, rot) { const maxW = 2400, minW = 1600; let sc = 1; c
   if (hi - lo > 30) for (let i = 0; i < p.length; i += 4) { const v = Math.max(0, Math.min(255, (p[i] - lo) * 255 / (hi - lo))); p[i] = p[i + 1] = p[i + 2] = v; } x.putImageData(d, 0, 0); return c; }
 async function ocrSource(it) { if (it.kind === 'pdf') { const pdf = await pdfjsLib.getDocument({data: new Uint8Array(it.buf.slice(0))}).promise; const page = await pdf.getPage(1); const vp = page.getViewport({scale: 2}); const c = document.createElement('canvas'); c.width = vp.width; c.height = vp.height; await page.render({canvasContext: c.getContext('2d'), viewport: vp}).promise; return {src: c, w: c.width, h: c.height}; }
   const bmp = await createImageBitmap(new Blob([it.buf], {type: it.file.type || 'image/png'})); return {src: bmp, w: bmp.width, h: bmp.height}; }
-async function ocrItem(it, wk) { const o = await ocrSource(it); let best = null;
+async function ocrItem(it, wk) { await ensureBuf(it); const o = await ocrSource(it); let best = null;
   for (const rot of [0, 90, 270, 180]) { const r = await wk.recognize(ocrPrep(o.src, o.w, o.h, rot)); const conf = r.data.confidence || 0; if (!best || conf > best.conf) best = {conf, text: r.data.text || '', rot}; if (conf >= 60) break; }
   const lines = best.text.split('\n').map(l => l.trim()).filter(Boolean); return {lines, conf: Math.round(best.conf), rot: best.rot}; }
-$('#btnOcr').onclick = async () => { const list = S.items.filter(i => i.status === 'pendiente' && i.needsOcr); if (!list.length || OCRBUSY) return; OCRBUSY = true; const b = $('#btnOcr'); b.disabled = true; const stEl = $('#procStatus'); const st = t => { stEl.textContent = t; }; let ok = 0;
+async function runOcr(list, btnSel, stSel, after) { if (!list.length || OCRBUSY) return; OCRBUSY = true; const b = $(btnSel); b.disabled = true; const stEl = $(stSel); const st = t => { stEl.textContent = t; }; let ok = 0;
   try { const wk = await ocrLoad(st); let n = 0;
     for (const it of list) { n++; try { st(`OCR ${n} de ${list.length}: ${it.name}`); const r = await ocrItem(it, wk);
         if (r.lines.join('').replace(/\s/g, '').length < 20) { it.notes.push('OCR: no se reconoció texto suficiente. Captura los datos mirando la vista previa'); it.needsOcr = false; it.ocr = true; continue; }
@@ -741,19 +775,8 @@ $('#btnOcr').onclick = async () => { const list = S.items.filter(i => i.status =
         it.conf = 'baja'; it.confBase = 'baja'; it.confUp = false; it.docIso = undefined; it.selected = false; ok++; }
       catch (e) { log(`OCR falló con «${it.name}»: ${e.message}`, 'e'); } }
     log(`OCR: ${ok} de ${list.length} documento(s) leídos. Quedan SIN seleccionar: revisa cada uno contra la vista previa (el OCR puede equivocarse en montos y fechas).`, ok ? 'o' : 'w'); }
-  catch (e) { log('OCR: ' + e.message, 'e'); } finally { OCRBUSY = false; stEl.textContent = ''; applyQboDates(); renderItems(); } };
-
-/* ---------- traer lo subido a mano a Drive ---------- */
-$('#btnDriveIn').onclick = async () => { if (!S.root) { log('Conecta primero con Google Drive.', 'w'); return; } const b = $('#btnDriveIn'); b.disabled = true;
-  try { await Drive.session(); await refreshSupports(); const have = new Set(S.items.map(i => i.driveId).filter(Boolean));
-    const cand = S.nonStd.filter(f => f.dirId === S.enProceso.id && f.fid && !have.has(f.fid));
-    if (!cand.length) { log(S.cfg.fullScope ? 'No hay archivos nuevos con nombre no estándar en «En proceso».' : 'No encontré archivos nuevos. Con el acceso limitado la herramienta no ve lo subido a mano: activa «Acceso completo a Drive» en Conexión con Google y vuelve a conectar.', 'w'); return; }
-    const st = $('#procStatus'); let n = 0, added = 0;
-    for (const f of cand) { st.textContent = `Leyendo de Drive ${++n} de ${cand.length}: ${f.name}`;
-      try { const buf = await Drive.read(f.fid); const ext = extOf(f.name); const file = new File([buf], f.name, {type: ext === '.pdf' ? 'application/pdf' : 'image/' + (ext === '.jpg' ? 'jpeg' : ext.slice(1))}); const it = await buildItem(file, {email: 'Drive (subido a mano)'}); it.driveId = f.fid; it.notes.unshift('Archivo subido a mano a Drive: al guardar se renombra en su lugar'); S.items.push(it); added++; }
-      catch (e) { log(`No pude leer «${f.name}» de Drive: ${e.message}`, 'e'); } }
-    st.textContent = ''; applyQboDates(); renderItems(); log(`Se trajeron ${added} archivo(s) de Drive a la lista. Revisa y guarda para renombrarlos.`, added ? 'o' : 'w'); }
-  catch (e) { log('Error al leer Drive: ' + e.message, 'e'); } finally { b.disabled = false; $('#procStatus').textContent = ''; } };
+  catch (e) { log('OCR: ' + e.message, 'e'); } finally { OCRBUSY = false; stEl.textContent = ''; after(); } }
+$('#btnOcr').onclick = () => runOcr(S.items.filter(i => i.status === 'pendiente' && i.needsOcr), '#btnOcr', '#procStatus', () => { applyQboDates(); renderItems(); });
 
 /* ---------- Gmail (solo lectura) ---------- */
 const GMAPI = 'https://gmail.googleapis.com/gmail/v1/users/me';
@@ -808,6 +831,110 @@ const drop = $('#drop'), fileIn = $('#fileIn');
 drop.addEventListener('click', () => fileIn.click()); fileIn.addEventListener('change', () => { addFiles(fileIn.files); fileIn.value = ''; });
 ['dragenter', 'dragover'].forEach(ev => drop.addEventListener(ev, e => { e.preventDefault(); drop.classList.add('over'); })); ['dragleave', 'drop'].forEach(ev => drop.addEventListener(ev, e => { e.preventDefault(); drop.classList.remove('over'); }));
 drop.addEventListener('drop', e => addFiles(e.dataTransfer.files));
+
+/* =====================================================================
+   TAB 3 · PENDIENTES EN DRIVE (administrar lo que está en «En proceso» sin subir archivos)
+   ===================================================================== */
+S.pend = []; S.selPend = null;
+const mimeOf = ext => ext === '.pdf' ? 'application/pdf' : 'image/' + (ext === '.jpg' || ext === '.jpeg' ? 'jpeg' : ext.slice(1));
+async function ensureBuf(it) { if (it.buf) return; const buf = await Drive.read(it.driveId); it.buf = buf; it.file = new File([buf], it.name, {type: mimeOf(it.ext)}); }
+const lc = x => String(x || '').toLowerCase();
+const pendFind = id => S.pend.find(x => x.id === +id);
+function pendNames(except) { const n = new Set(); S.pend.forEach(i => { if (i !== except && i.driveName) n.add(lc(i.driveName)); }); S.supports.filter(x => x.locked).forEach(x => n.add(lc(x.name))); return n; }
+function pendTarget(it, extra) { if (!itemValid(it)) return ''; const vendor = itemVendor(it), iso = itemIso(it), cents = itemCents(it), ext = it.ext; const names = pendNames(it); if (extra) extra.forEach(n => names.add(n)); names.delete(lc(it.driveName));
+  const base0 = Core.buildName(vendor, iso, cents, '');
+  if (it.complement) { const cur = it.driveName && lc(it.driveName).match(/_c(\d+)(\.[a-z0-9]+)$/); if (cur && lc(it.driveName) === lc(base0 + '_C' + cur[1] + ext)) return it.driveName; let k = 2; while (names.has(lc(base0 + '_C' + k + ext))) k++; return base0 + '_C' + k + ext; }
+  let k = 1, n = base0 + ext; while (names.has(lc(n))) { k++; n = base0 + '_' + k + ext; } return n; }
+const pendDirty = it => itemValid(it) && lc(pendTarget(it)) !== lc(it.driveName);
+function pendDup(it) { if (it.complement) return ''; const v = itemVendor(it), iso = itemIso(it), c = itemCents(it); if (!v || !iso || c == null) return ''; const k = Core.normName(v);
+  const o = S.pend.find(x => x !== it && !x.complement && x.status !== 'error' && itemVendor(x) && Core.normName(itemVendor(x)) === k && itemCents(x) === c && itemIso(x) && Math.abs(Core.dayNum(itemIso(x)) - Core.dayNum(iso)) <= 3);
+  return o ? 'Mismo vendor y monto que «' + o.driveName + '»' + (itemIso(o) === iso ? ' y misma fecha' : ' (fecha a ' + Math.abs(Core.dayNum(itemIso(o)) - Core.dayNum(iso)) + ' día(s))') : ''; }
+function pendRecon(it) { const R = S.result && S.result.res; if (!R) return null; const nm = it.driveName;
+  for (const p of R.pairs) { if (p.s.name === nm && !p.s.locked) return {st: p.status, p, kind: 'main'}; if ((p.comps || []).some(c => c.name === nm)) return {st: p.status, p, kind: 'comp'}; }
+  const x = R.sin.find(y => y.s.name === nm && !y.s.locked); if (x) return {st: 'SIN_TXN', why: x.why}; return {st: 'FUERA', why: 'No entró en la última conciliación (otro periodo o archivo nuevo)'}; }
+function pendReconHtml(it) { const r = pendRecon(it); if (!r) return ''; const m = Core.money;
+  if (r.st === 'FUERA') return `<div class="note">${esc(r.why)}</div>`;
+  if (r.st === 'SIN_TXN') return `<div><span class="badge baja">Sin transacción en QBO</span></div><div class="note">${esc(r.why)}</div>`;
+  const t = r.p.t; const q = `QBO: ${esc(t.type)}${t.num ? ' #' + esc(t.num) : ''} · ${esc(t.vendor)} · USD ${m(t._abs)} · ${Core.fmtUS(t.iso)}`;
+  if (r.kind === 'comp') return `<div><span class="badge CONCILIADO">Complemento</span></div><div class="note">${q}</div>`;
+  if (r.st === 'CONCILIADO') return `<div><span class="badge CONCILIADO">Conciliado</span></div><div class="note">Falta moverlo a «Conciliados» (pestaña 2). ${q}</div>`;
+  return `<div><span class="badge ${r.st}">${esc(LBL[r.st])}</span></div><div class="note">${q}</div><div class="note"><a href="#" data-act="useqbo">Usar los datos de QBO</a> (vendor, fecha y monto)</div>`; }
+function pendFinalHtml(it) { if (!itemValid(it)) return '<span class="src">— completa los campos —</span>'; const t = pendTarget(it); return lc(t) === lc(it.driveName) ? '<span class="src">sin cambios</span>' : esc(t); }
+function pendStatusHtml(it) { let h = pendReconHtml(it); const dh = pendDup(it);
+  if (it.status === 'duplicado') h += `<div class="note">⚠ Archivo idéntico a otro ya guardado: ${esc(it.reason)}. Si es duplicado, mándalo a «_Duplicados».</div>`;
+  if (!it.stdName && !it.renamed) h += '<div class="note">Nombre no estándar: se renombrará con los datos de la fila.</div>';
+  h += itemValid(it) ? (pendDirty(it) ? '<div><span class="badge media">Cambio por aplicar</span></div>' : '<div><span class="badge YA">Sin cambios</span></div>') : '<div><span class="badge media">Falta dato</span></div>';
+  if (it.complement) h += '<div class="note" style="color:var(--info)">Complemento: se nombra con sufijo _C y se concilia con la misma partida que su principal</div>';
+  else if (dh) h += `<div class="note">⚠ ${esc(dh)}: ¿duplicado? Si es otro documento del mismo gasto, marca «Es un complemento»; si sobra, mándalo a «_Duplicados».</div>`;
+  if (dh || it.complement) h += `<label class="note"><input type="checkbox" class="cmpchk" ${it.complement ? 'checked' : ''}> Es un complemento</label>`; return h; }
+function pendRowHtml(it) { const v = it.ed;
+  return `<tr data-id="${it.id}" class="${it.id === S.selPend ? 'sel' : ''}"><td><input type="checkbox" class="chk" ${it.selected ? 'checked' : ''}></td>
+  <td class="fn"><a href="#" class="view">${esc(it.driveName)}</a><div class="src">${it.stdName || it.renamed ? 'Nombre estándar' : 'Nombre no estándar'}</div>${it.notes.map(n => `<div class="note">• ${esc(n)}</div>`).join('')}</td>
+  <td><input data-f="vendor" list="dlVendors" value="${esc(v.vendor)}"></td>
+  <td><input class="dt" data-f="date" placeholder="MM/DD/AAAA" value="${esc(v.date)}"></td>
+  <td><input class="amt" data-f="amt" list="dlP${it.id}" value="${esc(v.amt)}"><datalist id="dlP${it.id}">${(it.alts || []).map(c => `<option value="${(c / 100).toFixed(2)}">`).join('')}</datalist></td>
+  <td class="final">${pendFinalHtml(it)}</td><td class="stt">${pendStatusHtml(it)}</td></tr>`; }
+function pendVisible() { const f = $('#pdFilter').value, q = lc($('#pdQ').value.trim()); return S.pend.filter(it => { if (q && !lc(it.driveName + ' ' + it.ed.vendor).includes(q)) return false;
+  if (f === 'nonstd') return !it.stdName && !it.renamed; if (f === 'dirty') return pendDirty(it); if (f === 'dup') return it.status === 'duplicado' || !!pendDup(it);
+  if (f === 'review') { const r = pendRecon(it); return !!r && r.st !== 'CONCILIADO' && r.st !== 'FUERA' && r.kind !== 'comp'; } return true; }); }
+function pendRender() { const tb = $('#pdBody'); const vis = pendVisible();
+  tb.innerHTML = vis.length ? vis.map(pendRowHtml).join('') : `<tr><td colspan="7" class="empty">${S.pend.length ? 'Ningún archivo con este filtro.' : 'No hay archivos pendientes en «En proceso».'}</td></tr>`;
+  $$('#pdBody tr[data-id]').forEach(pendValidate);
+  $('#pdInfo').innerHTML = S.result ? `Estatus según la última conciliación (${S.result.ran.toLocaleTimeString('en-US')}). Si cargas otro Excel o cambias el periodo en «2. Conciliar», vuelve a conciliar para actualizar.` : 'Para ver el estatus de conciliación de cada archivo, carga el Excel de QBO en «2. Conciliar con QBO» y pulsa «Conciliar»; luego vuelve aquí.'; pendCounters(); }
+function pendValidate(tr) { const it = pendFind(tr.dataset.id); if (!it) return; tr.querySelector('[data-f=vendor]').classList.toggle('invalid', !itemVendor(it)); tr.querySelector('[data-f=date]').classList.toggle('invalid', !itemIso(it)); const c = itemCents(it); tr.querySelector('[data-f=amt]').classList.toggle('invalid', !(c != null && c > 0)); }
+function pendCounters() { const sel = S.pend.filter(i => i.selected), ap = sel.filter(i => itemValid(i) && pendDirty(i)), nd = S.pend.filter(i => i.status === 'duplicado' || pendDup(i)).length, ns = S.pend.filter(i => !i.stdName && !i.renamed).length, no = S.pend.filter(i => i.needsOcr).length;
+  $('#pdCounters').textContent = `${S.pend.length} en «En proceso» · ${sel.length} seleccionados · ${S.pend.filter(i => itemValid(i) && pendDirty(i)).length} con cambios por aplicar` + (nd ? ` · ⚠ ${nd} posible(s) duplicado(s)` : '') + (ns ? ` · ${ns} con nombre no estándar` : '');
+  const a = $('#pdApply'); a.textContent = `Aplicar cambios en Drive (${ap.length})`; a.disabled = !ap.length; const d = $('#pdDup'); d.textContent = `Mover a «_Duplicados» (${sel.length})`; d.disabled = !sel.length;
+  const o = $('#pdOcr'); if (!OCRBUSY) { o.textContent = `Leer con OCR (${no})`; o.disabled = !no; } }
+async function pendLoad() { if (!S.root) { log('Conecta primero con Google Drive.', 'w'); $('#pdStatus').textContent = 'Conecta primero con Google Drive (arriba a la derecha).'; return; }
+  if (S.pend.some(i => itemValid(i) && pendDirty(i)) && !confirm('Hay cambios sin aplicar en esta lista. Si consultas de nuevo se pierden. ¿Continuar?')) return;
+  const btn = $('#pdLoad'), st = $('#pdStatus'); btn.disabled = true; st.textContent = 'Consultando Drive…';
+  try { await Drive.session(); await refreshRegistry(); await refreshSupports(); const dir = S.enProceso.id, out = [];
+    for (const sp of S.supports.filter(x => !x.locked && x.dirId === dir)) { const ext = extOf(sp.name);
+      out.push(newItem({name: sp.name, ext, kind: ext === '.pdf' ? 'pdf' : 'image', source: {email: 'Drive · En proceso'}, fromDrive: true, driveId: sp.fid, driveName: sp.name, stdName: true, complement: !!sp.comp, ed: {vendor: sp.vendor, date: Core.fmtUS(sp.iso), amt: (sp.cents / 100).toFixed(2)}, conf: 'alta'})); }
+    const non = S.nonStd.filter(f => f.dirId === dir && f.fid); let n = 0;
+    for (const f of non) { st.textContent = `Leyendo archivo de nombre no estándar ${++n} de ${non.length}: ${f.name}`;
+      try { const buf = await Drive.read(f.fid); const ext = extOf(f.name); const it = await buildItem(new File([buf], f.name, {type: mimeOf(ext)}), {email: 'Drive · En proceso'}); it.fromDrive = true; it.driveId = f.fid; it.driveName = f.name; it.stdName = false; it.selected = false; out.push(it); }
+      catch (e) { log(`No pude leer «${f.name}» de Drive: ${e.message}`, 'e'); } }
+    out.sort((a, b) => lc(a.ed.vendor).localeCompare(lc(b.ed.vendor)) || (itemIso(a) || '').localeCompare(itemIso(b) || '') || lc(a.driveName).localeCompare(lc(b.driveName)));
+    S.pend = out; S.selPend = null; pendRender(); st.textContent = '';
+    log(`Pendientes en Drive: ${out.length} archivo(s) en «En proceso»` + (non.length ? `, ${non.length} con nombre no estándar` : '') + (S.nonStd.some(f => f.dirId !== dir) ? ' (hay archivos con nombre no estándar en carpetas «Conciliados»; no se tocan)' : '') + '.', 'o'); }
+  catch (e) { st.textContent = ''; log('No pude consultar Drive: ' + e.message, 'e'); } finally { btn.disabled = false; } }
+function regTouch(it, oldName, patch) { let en = S.registry.entries.find(e => e.savedName === oldName && e.folder === 'En proceso'); if (!en) { en = {hash: it.hash || null, originalName: oldName, savedName: oldName, vendor: itemVendor(it), date: itemIso(it), amount: itemCents(it) / 100, savedAt: null, folder: 'En proceso', status: 'En proceso'}; S.registry.entries.push(en); } Object.assign(en, patch); return en; }
+async function pendRefreshAfter() { rebuildIndex(); persistVendors(); renderVendors(); if (!await saveRegistry()) log('ATENCIÓN: los cambios se hicieron en Drive pero el registro no se pudo guardar. Repite «Consultar Drive» más tarde.', 'e'); await refreshSupports(); if (S.result && S.qbo && !S.qbo.err) await runReconcile(); pendRender(); }
+async function pendApply() { const list = S.pend.filter(i => i.selected && itemValid(i) && pendDirty(i)); if (!list.length) return; const btn = $('#pdApply'); btn.disabled = true; let ok = 0;
+  try { await Drive.session(); const live = new Set((await Drive.list(S.enProceso.id)).map(f => lc(f.name)));
+    for (const it of list) { try { const old = it.driveName, name = pendTarget(it, live); if (lc(name) === lc(old)) continue; const vendor = itemVendor(it), iso = itemIso(it), cents = itemCents(it);
+        await Drive.rename(it.driveId, name); live.delete(lc(old)); live.add(lc(name)); addVendorIfNew(vendor, it.ed.vendor.trim());
+        regTouch(it, old, {savedName: name, vendor, date: iso, amount: cents / 100, edited: true, editedAt: new Date().toISOString(), editedBy: S.cfg.operator || null, complement: /_C\d+\.[A-Za-z0-9]+$/.test(name) || undefined});
+        it.driveName = name; it.name = name; it.renamed = true; it.selected = false; it.notes = it.notes.filter(x => !/Archivo subido a mano/.test(x)); ok++; log(`Renombrado en Drive: ${old}  →  ${name}`, 'o'); }
+      catch (e) { log(`No se pudo renombrar «${it.driveName}»: ${e.message}`, 'e'); } }
+    log(`Resultado: ${ok} de ${list.length} cambio(s) aplicados en «En proceso».`, ok === list.length ? 'o' : 'w'); await pendRefreshAfter(); }
+  catch (e) { log('Error al aplicar cambios: ' + e.message, 'e'); pendRender(); } }
+async function pendToDup() { const list = S.pend.filter(i => i.selected); if (!list.length) return;
+  if (!confirm(`¿Mover ${list.length} archivo(s) a la carpeta «_Duplicados» de Drive? No se borran: quedan guardados ahí y dejan de participar en la conciliación.`)) return; const btn = $('#pdDup'); btn.disabled = true; let ok = 0;
+  try { await Drive.session(); const dup = await Drive.sub(S.root.id, '_Duplicados'); const names = new Set((await Drive.list(dup.id)).map(f => lc(f.name)));
+    for (const it of list) { try { let nm = it.driveName; if (names.has(lc(nm))) { const b = nm.replace(/(\.[A-Za-z0-9]+)$/, ''), ext = extOf(nm); let k = 2; while (names.has(lc(`${b}_${k}${ext}`))) k++; nm = `${b}_${k}${ext}`; }
+        await Drive.move(it.driveId, S.enProceso.id, dup.id, nm !== it.driveName ? nm : null); names.add(lc(nm));
+        const en = regTouch(it, it.driveName, {}); en.savedName = nm; en.folder = '_Duplicados'; en.status = 'Duplicado'; en.movedAt = new Date().toISOString(); en.movedBy = S.cfg.operator || null;
+        S.pend = S.pend.filter(x => x !== it); ok++; log(`Movido a _Duplicados: ${it.driveName}` + (nm !== it.driveName ? ' → ' + nm : ''), 'o'); }
+      catch (e) { log(`No se pudo mover «${it.driveName}»: ${e.message}` + (e.status === 404 ? ' (ya no está en En proceso: ¿otra sesión lo movió?)' : ''), 'e'); } }
+    log(`Resultado: ${ok} de ${list.length} archivo(s) movidos a «_Duplicados».`, ok === list.length ? 'o' : 'w'); await pendRefreshAfter(); }
+  catch (e) { log('Error al mover a _Duplicados: ' + e.message, 'e'); pendRender(); } }
+$('#pdLoad').onclick = pendLoad; $('#pdApply').onclick = pendApply; $('#pdDup').onclick = pendToDup;
+$('#pdOcr').onclick = () => runOcr(S.pend.filter(i => i.needsOcr), '#pdOcr', '#pdStatus', () => pendRender());
+$('#pdSelAll').onclick = () => { pendVisible().forEach(i => { i.selected = true; }); pendRender(); }; $('#pdSelNone').onclick = () => { S.pend.forEach(i => { i.selected = false; }); pendRender(); };
+$('#pdFilter').onchange = pendRender; $('#pdQ').oninput = pendRender;
+$('#pdBody').addEventListener('input', e => { const tr = e.target.closest('tr'); if (!tr || !e.target.dataset.f) return; const it = pendFind(tr.dataset.id); it.ed[e.target.dataset.f] = e.target.value; if (pendDirty(it)) { it.selected = true; tr.querySelector('.chk').checked = true; }
+  tr.querySelector('.final').innerHTML = pendFinalHtml(it); tr.querySelector('.stt').innerHTML = pendStatusHtml(it); pendValidate(tr); pendCounters(); });
+$('#pdBody').addEventListener('change', e => { const tr = e.target.closest('tr'); if (!tr) return; const it = pendFind(tr.dataset.id); if (!it) return;
+  if (e.target.classList.contains('chk')) { it.selected = e.target.checked; pendCounters(); return; }
+  if (e.target.classList.contains('cmpchk')) { it.complement = e.target.checked; if (pendDirty(it)) it.selected = true; pendRender(); return; }
+  if (e.target.dataset.f) pendRender(); });
+$('#pdBody').addEventListener('click', e => { const tr = e.target.closest('tr'); if (!tr) return; const it = pendFind(tr.dataset.id); if (!it) return;
+  const u = e.target.closest('[data-act=useqbo]'); if (u) { e.preventDefault(); const r = pendRecon(it); if (r && r.p) { it.ed.vendor = r.p.t.vendor; it.ed.date = Core.fmtUS(r.p.t.iso); it.ed.amt = (r.p.t._abs / 100).toFixed(2); if (pendDirty(it)) it.selected = true; pendRender(); } return; }
+  const a = e.target.closest('a.view'); if (!a) return; e.preventDefault(); S.selPend = it.id; $$('#pdBody tr').forEach(r => r.classList.toggle('sel', +r.dataset.id === it.id)); showPreview(it, '#pvBody2'); });
+$('#pvBody2').addEventListener('click', e => { if (e.target.closest('canvas,img')) openLightbox(pendFind(S.selPend)); });
 
 /* =====================================================================
    TAB 2 · CONCILIAR
@@ -971,8 +1098,8 @@ $('#helpBody').innerHTML = `
 <li>Montos en el nombre del archivo van sin separador de miles (ej. <code>1250.00</code>) y fechas con guiones (los diagonales no son válidos en nombres).</li></ul>
 <h3>Evidencia que queda documentada</h3>
 <ul><li><code>_Control/registro_soportes.json</code>: cada soporte, su origen, si fue editado a mano y su partida de QBO.</li><li><code>_Control/Reportes/Conciliacion_*.xlsx</code>: reporte de cada movimiento. La bitácora de esta pantalla muestra cada acción.</li></ul>
-<h3>Archivos subidos directamente a Drive</h3>
-<p>La herramienta usa <b>acceso completo a Drive</b> (se aplica al abrir esta versión; la primera vez Google pedirá permiso de nuevo). Si alguien sube un PDF o imagen a mano a «En proceso», pulsa <b>«Traer lo subido a mano a Drive»</b> en Procesar: se lee, se propone vendor/fecha/monto y, al guardar, el archivo <b>se renombra en su lugar</b> (no se copia ni se duplica). Si quitas el acceso completo en Configuración, la herramienta solo verá lo que ella misma subió.</p>
+<h3>Pendientes en Drive: administrar lo que ya está guardado</h3>
+<p>La pestaña <b>3. Pendientes en Drive</b> trae, con el botón <b>«Consultar Drive»</b>, todos los archivos de «En proceso» (no conciliados), sin subir nada. Incluye los que se subieron a mano con cualquier nombre (se leen para proponer vendor, fecha y monto). Desde ahí puedes: ver la vista previa (clic para ampliar), corregir vendor, fecha y monto, marcar <b>«Es un complemento»</b>, usar <b>«Leer con OCR»</b> en los escaneos, y pulsar <b>«Aplicar cambios en Drive»</b>, que <b>renombra el archivo en su lugar</b> (no se copia). Los duplicados se mandan a la carpeta <b>«_Duplicados»</b> (nunca se borran) y dejan de participar en la conciliación. Si ya concilias en la pestaña 2, cada archivo muestra su estatus (Conciliado, Monto diferente, Sin transacción…) con la partida de QBO, y el botón <b>«Usar los datos de QBO»</b> corrige vendor, fecha y monto de un clic; al aplicar cambios la conciliación se recalcula sola. Con el acceso limitado de Drive la herramienta no ve lo subido a mano: usa «Acceso completo a Drive» (viene activado).</p>
 <h3>Dos soportes del mismo documento (complementos)</h3>
 <p>Si un vendor tiene un segundo soporte del mismo gasto (por ejemplo factura y comprobante, o páginas por separado), la herramienta avisa «posible duplicado». Si <b>no</b> es duplicado, marca la casilla <b>«Es un complemento (guardar ambos)»</b> en esa fila: se selecciona y se guarda con el sufijo <code>_C2</code> (<code>_C3</code>…) junto al principal. En la conciliación el complemento viaja con el principal: se concilia con la misma partida de QBO, se mueve junto con él a «Conciliados» y aparece en el reporte (columna «Complementos»). Un archivo idéntico (mismos bytes) nunca se acepta como complemento. Un segundo archivo con sufijo <code>_2</code> (sin C) se considera posible duplicado y queda en «Soportes sin transacción» para tu revisión. Si el complemento tiene otro monto o fecha que el principal, no uses la casilla: se guarda como un soporte normal y se concilia con su propia partida.</p>
 <h3>Estatus de lo guardado en Drive</h3>
