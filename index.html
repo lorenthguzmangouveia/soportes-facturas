@@ -102,7 +102,7 @@ small.mute{color:var(--mute)}
   </div>
   <div class="wrap"><nav class="tabs" id="tabs">
     <button data-tab="proc" class="on">1. Subir soportes</button>
-    <button data-tab="pend">2. Revisar en Drive</button>
+    <button data-tab="pend">2. Por identificar</button>
     <button data-tab="conc">3. Conciliar con QBO</button>
     <button data-tab="vend">Vendors</button>
     <button data-tab="help">Ayuda</button>
@@ -122,7 +122,7 @@ small.mute{color:var(--mute)}
 
 <!-- ============ TAB 1 ============ -->
 <section id="tab-proc">
-  <div class="alert info guide"><b>Paso 1 · Subir soportes.</b> Arrastra los PDF o fotos (o búscalos en Gmail), revisa vendor, fecha y monto, y pulsa <b>«Guardar»</b>. Quedan en Drive, en «En proceso». <b>Siguiente:</b> paso 2 para corregir lo guardado, o paso 3 para conciliar.</div>
+  <div class="alert info guide"><b>Paso 1 · Subir soportes.</b> Arrastra los PDF o fotos (o búscalos en Gmail), revisa vendor, fecha y monto, y pulsa <b>«Guardar»</b>. Quedan en Drive, en la carpeta <b>«En proceso»</b> (por identificar). <b>Siguiente:</b> paso 2.</div>
   <div class="card">
     <h2>Cargar soportes</h2>
     <div class="row" style="margin-bottom:10px"><button class="btn sec" id="btnGmail" title="Solo lectura: no marca, mueve ni borra correos">Buscar adjuntos en Gmail</button><label class="btn sec">Cargar Excel de QBO (opcional)<input type="file" id="xlsIn2" accept=".xlsx,.xls,.csv" hidden></label><button class="btn sec" id="btnOcr" disabled style="display:none" title="Lee con OCR los PDF escaneados y las fotos de la lista">Leer con OCR (0)</button><span id="xlsName2" class="src">El Excel es opcional: sirve para nombrar cada soporte con la <b>fecha del sistema</b> de QBO.</span></div>
@@ -157,24 +157,24 @@ small.mute{color:var(--mute)}
 
 <!-- ============ TAB 3 · PENDIENTES EN DRIVE ============ -->
 <section id="tab-pend" hidden>
-  <div class="alert info guide"><b>Paso 2 · Revisar en Drive.</b> Pulsa <b>«Consultar Drive»</b> para ver lo que ya está en «En proceso» (sin subir nada). Corrige vendor, fecha y monto, marca complementos o manda duplicados a «_Duplicados». <b>Siguiente:</b> paso 3 para conciliar con QBO.</div>
+  <div class="alert info guide"><b>Paso 2 · Por identificar.</b> Pulsa <b>«Consultar Drive»</b> para ver lo que está en «En proceso» (lo guardado aquí o subido a mano). Verifica vendor, fecha y monto, tilda los que están listos y pulsa <b>«Pasar a Por conciliar»</b>. Los duplicados van a «_Duplicados». <b>Siguiente:</b> paso 3.</div>
   <div class="card">
-    <h2>Lo que está pendiente en Drive</h2>
+    <h2>Archivos en Drive</h2>
     <div class="row" style="margin-bottom:8px"><button class="btn" id="pdLoad">Consultar Drive</button><button class="btn sec" id="pdOcr" disabled style="display:none" title="Lee con OCR los archivos sin texto">Leer con OCR (0)</button><span class="src" id="pdStatus"></span></div>
-    <div id="pdInfo" class="src">Trae los archivos que están en «En proceso» (no conciliados). Aquí puedes corregir vendor, fecha y monto, marcar complementos, ver la vista previa mandar duplicados a «_Duplicados» y, si ya concilias, mover a la carpeta del mes lo que tildes, sin subir nada.</div>
+    <div id="pdInfo" class="src">Trae los archivos de la carpeta elegida (por defecto «En proceso», los que faltan por identificar). Corrige vendor, fecha y monto, marca complementos, mira la vista previa y pasa a «Por conciliar» lo que esté listo; los duplicados van a «_Duplicados». No sube nada.</div>
   </div>
   <div class="grid2">
     <div class="card" style="padding:0">
       <div class="row" style="padding:12px 14px 4px"><b style="font-size:13px">Con lo que tildes:</b>
-        <button class="btn" id="pdApply" disabled>Aplicar cambios en Drive (0)</button>
-        <button class="btn" id="pdMove" disabled title="Mueve los archivos tildados a «Conciliados MM-AAAA» (mes de la fecha de QBO). Requiere haber conciliado en el paso 3 (Conciliar con QBO).">Conciliar y mover al mes (0)</button>
+        <button class="btn" id="pdPromote" disabled>Pasar a «Por conciliar» (0)</button>
+        <button class="btn sec" id="pdApply" disabled>Aplicar cambios en Drive (0)</button>
         <button class="btn sec" id="pdDup" disabled>Mover a «_Duplicados» (0)</button>
       </div>
-      <div id="pdMoveHint" class="src" style="padding:0 14px 6px;display:none"></div>
       <div class="row" style="padding:4px 14px 12px">
         <button class="btn sec" id="pdSelAll">Marcar todos los visibles</button>
         <button class="btn sec" id="pdSelNone">Desmarcar</button>
-        <label>Mostrar <select id="pdFilter"><option value="all">Todos</option><option value="review">Con diferencias o sin transacción</option><option value="nonstd">Nombre no estándar</option><option value="dirty">Con cambios sin aplicar</option><option value="dup">Posibles duplicados</option></select></label>
+        <label>Carpeta <select id="pdFolder"><option value="En proceso">Por identificar (En proceso)</option><option value="Por conciliar">Por conciliar</option></select></label>
+        <label>Mostrar <select id="pdFilter"><option value="all">Todos</option><option value="review">Con diferencias o sin transacción (solo «Por conciliar»)</option><option value="nonstd">Nombre no estándar</option><option value="dirty">Con cambios sin aplicar</option><option value="dup">Posibles duplicados</option></select></label>
         <input type="text" id="pdQ" placeholder="Buscar vendor o archivo" style="max-width:200px">
         <span class="src" id="pdCounters"></span>
       </div>
@@ -191,7 +191,7 @@ small.mute{color:var(--mute)}
 
 <!-- ============ TAB 2 ============ -->
 <section id="tab-conc" hidden>
-  <div class="alert info guide"><b>Paso 3 · Conciliar con QBO.</b> Carga el Excel de QBO, elige el mes y pulsa <b>«Conciliar»</b>. Revisa los resultados (puedes abrir cada archivo) y pulsa <b>«Mover»</b>: los conciliados pasan a «Conciliados MM-AAAA».</div>
+  <div class="alert info guide"><b>Paso 3 · Conciliar con QBO.</b> Carga el Excel de QBO, elige el mes y pulsa <b>«Conciliar»</b>: se cruza con lo que está en la carpeta <b>«Por conciliar»</b>. Revisa los resultados y pulsa <b>«Mover»</b>: los conciliados pasan a <b>«Conciliados MM-AAAA»</b> según la fecha de QBO.</div>
   <div class="card">
     <h2>Soportes en Drive</h2>
     <div id="concSupports" class="src">Conecta la carpeta de resguardo para ver los soportes.</div>
@@ -555,7 +555,7 @@ async function sha256(buf) { if (!(window.crypto && crypto.subtle)) return null;
 const $ = (s, r = document) => r.querySelector(s);
 const $$ = (s, r = document) => [...r.querySelectorAll(s)];
 const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({'&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;'}[c]));
-const S = {root: null, enProceso: null, ctrl: null, email: '', vDirty: false, cfg: {clientId: '', fullScope: true, scopeV: 2, rootName: 'Soportes_Facturas', rootId: null, email: '', operator: ''}, vendors: {vendors: []}, ignore: '', vIndex: Core.buildVendorIndex({vendors: []}),
+const S = {root: null, enProceso: null, porConc: null, ctrl: null, email: '', vDirty: false, cfg: {clientId: '', fullScope: true, scopeV: 2, rootName: 'Soportes_Facturas', rootId: null, email: '', operator: ''}, vendors: {vendors: []}, ignore: '', vIndex: Core.buildVendorIndex({vendors: []}),
   registry: {version: 1, entries: []}, items: [], sel: null, supports: [], nonStd: [], qbo: null, result: null, tol: 5, consolidate: false, period: {from: '', to: ''}, view: 'CONCILIADO'};
 const IMG_EXT = ['.png', '.jpg', '.jpeg', '.webp', '.gif'];
 const extOf = n => { const m = String(n).toLowerCase().match(/\.[a-z0-9]+$/); return m ? m[0] : ''; };
@@ -590,7 +590,7 @@ async function connect(force) {
       if (found.length) { root = {id: found[0].id, name: found[0].name}; if (found.length > 1) log(`Hay ${found.length} carpetas llamadas «${rootName}» visibles para esta cuenta; se usa la más antigua. Revisa y elimina duplicados en Drive.`, 'w'); }
       else { if (!confirm(`No encontré una carpeta «${rootName}» visible para ${S.email}.\n\n¿Crearla ahora en «Mi unidad» con sus subcarpetas «En proceso» y «_Control»?\n\n(Si ya existe y no la ves, cancela: puede ser otra cuenta de Google o falta el permiso de acceso completo.)`)) { log('Conexión cancelada: no se creó la carpeta.', 'w'); renderFolder(); return; }
         root = await Drive.createFolder(rootName, null); log(`Carpeta «${rootName}» creada en Drive.`, 'o'); } }
-    S.root = {id: root.id, name: root.name}; S.enProceso = await Drive.sub(root.id, 'En proceso'); S.ctrl = await Drive.sub(root.id, '_Control');
+    S.root = {id: root.id, name: root.name}; S.enProceso = await Drive.sub(root.id, 'En proceso'); S.porConc = await Drive.sub(root.id, 'Por conciliar'); S.ctrl = await Drive.sub(root.id, '_Control');
     S.cfg.rootId = root.id; S.cfg.rootName = root.name; saveCfg(); $('#cfgRoot').value = S.cfg.rootName;
     await loadShared(); rebuildIndex(); renderVendors(); renderFolder(); log(`Conectado a Drive como ${S.email}: carpeta «${root.name}» lista (En proceso y _Control verificadas).`, 'o'); await refreshSupports(); updateCounters();
   } catch (e) { log('No se pudo conectar con Drive: ' + e.message, 'e'); renderFolder(); } }
@@ -600,9 +600,9 @@ async function loadShared() {
 async function refreshRegistry() { if (!S.ctrl) return; const r = await Drive.readJSON(S.ctrl.id, 'registro_soportes.json'); S.registry = Core.mergeRegistry(r, S.registry); }
 
 $('#cfgClient').onchange = e => { S.cfg.clientId = e.target.value.trim(); Drive.token = null; saveCfg(); renderFolder(); };
-$('#cfgRoot').onchange = e => { const v = e.target.value.trim() || 'Soportes_Facturas'; if (v !== S.cfg.rootName) { S.cfg.rootName = v; S.cfg.rootId = null; S.root = S.enProceso = S.ctrl = null; saveCfg(); renderFolder(); refreshSupports(); } };
+$('#cfgRoot').onchange = e => { const v = e.target.value.trim() || 'Soportes_Facturas'; if (v !== S.cfg.rootName) { S.cfg.rootName = v; S.cfg.rootId = null; S.root = S.enProceso = S.porConc = S.ctrl = null; saveCfg(); renderFolder(); refreshSupports(); } };
 $('#cfgOp').onchange = e => { S.cfg.operator = e.target.value.trim(); saveCfg(); };
-$('#cfgFull').onchange = e => { S.cfg.fullScope = e.target.checked; Drive.token = null; S.cfg.rootId = null; S.root = S.enProceso = S.ctrl = null; saveCfg(); renderFolder(); log('Cambió el tipo de acceso: vuelve a conectar con Google.', 'w'); };
+$('#cfgFull').onchange = e => { S.cfg.fullScope = e.target.checked; Drive.token = null; S.cfg.rootId = null; S.root = S.enProceso = S.porConc = S.ctrl = null; saveCfg(); renderFolder(); log('Cambió el tipo de acceso: vuelve a conectar con Google.', 'w'); };
 /* ---------- diagnóstico ---------- */
 $('#gDiag').onclick = async () => { const out = $('#diagOut'); out.textContent = ''; const add = s => { out.textContent += s + '\n'; }; let bad = 0;
   const step = async (n, fn) => { try { const r = await fn(); add('✔ ' + n + (r ? ' — ' + r : '')); return true; } catch (e) { bad++; add('✘ ' + n + ': ' + e.message); return false; } };
@@ -858,12 +858,12 @@ const pendDirty = it => itemValid(it) && lc(pendTarget(it)) !== lc(it.driveName)
 function pendDup(it) { if (it.complement) return ''; const v = itemVendor(it), iso = itemIso(it), c = itemCents(it); if (!v || !iso || c == null) return ''; const k = Core.normName(v);
   const o = S.pend.find(x => x !== it && !x.complement && x.status !== 'error' && itemVendor(x) && Core.normName(itemVendor(x)) === k && itemCents(x) === c && itemIso(x) && Math.abs(Core.dayNum(itemIso(x)) - Core.dayNum(iso)) <= 3);
   return o ? 'Mismo vendor y monto que «' + o.driveName + '»' + (itemIso(o) === iso ? ' y misma fecha' : ' (fecha a ' + Math.abs(Core.dayNum(itemIso(o)) - Core.dayNum(iso)) + ' día(s))') : ''; }
-function pendRecon(it) { const R = S.result && S.result.res; if (!R) return null; const nm = it.driveName;
+function pendRecon(it) { if (it.folderName !== 'Por conciliar') return null; const R = S.result && S.result.res; if (!R) return null; const nm = it.driveName;
   for (const p of R.pairs) { if (p.s.name === nm && !p.s.locked) return {st: p.status, p, kind: 'main'}; if ((p.comps || []).some(c => c.name === nm)) return {st: p.status, p, kind: 'comp'}; }
   const x = R.sin.find(y => y.s.name === nm && !y.s.locked); if (x) return x.pair ? {st: 'OTRO_MES', p: x.pair, why: x.why} : {st: 'SIN_TXN', why: x.why, outside: x.outside}; return {st: 'FUERA', why: 'No entró en la última conciliación (otro periodo o archivo nuevo)'}; }
 function pendReconHtml(it) { const r = pendRecon(it); if (!r) return ''; const m = Core.money;
   if (r.st === 'FUERA') return `<div class="note">${esc(r.why)}</div>`;
-  if (r.st === 'OTRO_MES') return `<div><span class="badge media">Corresponde a otro mes</span></div><div class="note">${esc(r.why)}</div><div class="note"><b>Sugerencia:</b> tilda y pulsa «Conciliar y mover al mes» → «${esc(r.p.folder)}».</div>`;
+  if (r.st === 'OTRO_MES') return `<div><span class="badge media">Corresponde a otro mes</span></div><div class="note">${esc(r.why)}</div><div class="note"><b>Sugerencia:</b> se mueve desde el paso 3 (tabla «Soportes sin transacción») a «${esc(r.p.folder)}».</div>`;
   if (r.st === 'SIN_TXN') return `<div><span class="badge ${r.outside ? 'media' : 'baja'}">${r.outside ? 'En QBO, fuera del periodo' : 'Sin transacción en QBO'}</span></div><div class="note">${esc(r.why)}</div>`;
   const t = r.p.t; const q = `QBO: ${esc(t.type)}${t.num ? ' #' + esc(t.num) : ''} · ${esc(t.vendor)} · USD ${m(t._abs)} · ${Core.fmtUS(t.iso)}`;
   if (r.kind === 'comp') return `<div><span class="badge CONCILIADO">Complemento</span></div><div class="note">${q}</div>`;
@@ -890,30 +890,31 @@ function pendVisible() { const f = $('#pdFilter').value, q = lc($('#pdQ').value.
 function pendRender() { const tb = $('#pdBody'); const vis = pendVisible();
   tb.innerHTML = vis.length ? vis.map(pendRowHtml).join('') : `<tr><td colspan="7" class="empty">${S.pend.length ? 'Ningún archivo con este filtro.' : 'No hay archivos pendientes en «En proceso».'}</td></tr>`;
   $$('#pdBody tr[data-id]').forEach(pendValidate);
-  $('#pdInfo').innerHTML = S.result ? `Estatus según la última conciliación (${S.result.ran.toLocaleTimeString('en-US')}). Si cargas otro Excel o cambias el periodo en «3. Conciliar», vuelve a conciliar para actualizar.` : 'Para ver el estatus de conciliación de cada archivo, carga el Excel de QBO en «3. Conciliar con QBO» y pulsa «Conciliar»; luego vuelve aquí.'; pendCounters(); }
+  $('#pdInfo').innerHTML = S.pdFolder === 'Por conciliar' ? (S.result ? `Estatus según la última conciliación (${S.result.ran.toLocaleTimeString('en-US')}). Si cargas otro Excel o cambias el periodo en «3. Conciliar», vuelve a conciliar para actualizar.` : 'Estos archivos esperan la conciliación del paso 3 (carga el Excel de QBO y pulsa «Conciliar»). Aquí puedes corregirlos o devolverlos a «Por identificar».') : 'Archivos de «En proceso»: aún no entran a la conciliación. Verifica vendor, fecha y monto, tilda y pulsa «Pasar a Por conciliar».'; pendCounters(); }
 function pendValidate(tr) { const it = pendFind(tr.dataset.id); if (!it) return; tr.querySelector('[data-f=vendor]').classList.toggle('invalid', !itemVendor(it)); tr.querySelector('[data-f=date]').classList.toggle('invalid', !itemIso(it)); const c = itemCents(it); tr.querySelector('[data-f=amt]').classList.toggle('invalid', !(c != null && c > 0)); }
 function pendCounters() { const sel = S.pend.filter(i => i.selected), ap = sel.filter(i => itemValid(i) && pendDirty(i)), nd = S.pend.filter(i => i.status === 'duplicado' || pendDup(i)).length, ns = S.pend.filter(i => !i.stdName && !i.renamed).length, no = S.pend.filter(i => i.needsOcr).length;
   $('#pdCounters').textContent = `${S.pend.length} en «En proceso» · ${sel.length} seleccionados · ${S.pend.filter(i => itemValid(i) && pendDirty(i)).length} con cambios por aplicar` + (nd ? ` · ⚠ ${nd} posible(s) duplicado(s)` : '') + (ns ? ` · ${ns} con nombre no estándar` : '');
-  const a = $('#pdApply'); a.textContent = `Aplicar cambios en Drive (${ap.length})`; a.disabled = !ap.length; const d = $('#pdDup'); d.textContent = `Mover a «_Duplicados» (${sel.length})`; d.disabled = !sel.length; const mv = $('#pdMove'), nm = sel.filter(i => { const r = pendRecon(i); return r && r.p; }).length; mv.textContent = `Conciliar y mover al mes (${nm})`; mv.disabled = !sel.length; const mh = $('#pdMoveHint'); if (sel.length && !S.result) { mh.style.display = ''; mh.innerHTML = '⚠ <b>Para conciliar</b> primero carga el Excel de QBO y pulsa «Conciliar» en el paso 3. Hasta entonces solo puedes aplicar cambios o mandar a «_Duplicados». <button class="lnk" id="pdGo3">Ir al paso 3</button>'; } else if (sel.length && nm < sel.length) { mh.style.display = ''; mh.textContent = `${sel.length - nm} de los tildados no tienen transacción en QBO en la última conciliación: no se moverán (corrige vendor, fecha o monto, o cambia el periodo).`; } else { mh.style.display = 'none'; mh.textContent = ''; }
+  const a = $('#pdApply'); a.textContent = `Aplicar cambios en Drive (${ap.length})`; a.disabled = !ap.length; const d = $('#pdDup'); d.textContent = `Mover a «_Duplicados» (${sel.length})`; d.disabled = !sel.length; const pr = $('#pdPromote'), back = S.pdFolder === 'Por conciliar'; pr.textContent = back ? `Devolver a «Por identificar» (${sel.length})` : `Pasar a «Por conciliar» (${sel.length})`; pr.disabled = !sel.length;
   const o = $('#pdOcr'); if (!OCRBUSY) { o.textContent = `Leer con OCR (${no})`; o.disabled = !no; o.style.display = no ? '' : 'none'; } }
 async function pendLoad() { if (!S.root) { log('Conecta primero con Google Drive.', 'w'); $('#pdStatus').textContent = 'Conecta primero con Google Drive (arriba a la derecha).'; return; }
   if (S.pend.some(i => itemValid(i) && pendDirty(i)) && !confirm('Hay cambios sin aplicar en esta lista. Si consultas de nuevo se pierden. ¿Continuar?')) return;
   const btn = $('#pdLoad'), st = $('#pdStatus'); btn.disabled = true; st.textContent = 'Consultando Drive…';
-  try { await Drive.session(); await refreshRegistry(); await refreshSupports(); const dir = S.enProceso.id, out = [];
+  try { await Drive.session(); await refreshRegistry(); await refreshSupports(); const fname = $('#pdFolder').value, dir = (fname === 'Por conciliar' ? S.porConc : S.enProceso).id, out = [];
+    S.pdDir = dir; S.pdFolder = fname;
     for (const sp of S.supports.filter(x => !x.locked && x.dirId === dir)) { const ext = extOf(sp.name);
-      out.push(newItem({name: sp.name, ext, kind: ext === '.pdf' ? 'pdf' : 'image', source: {email: 'Drive · En proceso'}, fromDrive: true, driveId: sp.fid, driveName: sp.name, stdName: true, complement: !!sp.comp, ed: {vendor: sp.vendor, date: Core.fmtUS(sp.iso), amt: (sp.cents / 100).toFixed(2)}, conf: 'alta'})); }
+      out.push(newItem({name: sp.name, ext, kind: ext === '.pdf' ? 'pdf' : 'image', source: {email: 'Drive · ' + fname}, fromDrive: true, folderName: fname, dirId: dir, driveId: sp.fid, driveName: sp.name, stdName: true, complement: !!sp.comp, ed: {vendor: sp.vendor, date: Core.fmtUS(sp.iso), amt: (sp.cents / 100).toFixed(2)}, conf: 'alta'})); }
     const non = S.nonStd.filter(f => f.dirId === dir && f.fid); let n = 0;
     for (const f of non) { st.textContent = `Leyendo archivo de nombre no estándar ${++n} de ${non.length}: ${f.name}`;
-      try { const buf = await Drive.read(f.fid); const ext = extOf(f.name); const it = await buildItem(new File([buf], f.name, {type: mimeOf(ext)}), {email: 'Drive · En proceso'}); it.fromDrive = true; it.driveId = f.fid; it.driveName = f.name; it.stdName = false; it.selected = false; out.push(it); }
+      try { const buf = await Drive.read(f.fid); const ext = extOf(f.name); const it = await buildItem(new File([buf], f.name, {type: mimeOf(ext)}), {email: 'Drive · ' + fname}); it.fromDrive = true; it.folderName = fname; it.dirId = dir; it.driveId = f.fid; it.driveName = f.name; it.stdName = false; it.selected = false; out.push(it); }
       catch (e) { log(`No pude leer «${f.name}» de Drive: ${e.message}`, 'e'); } }
     out.sort((a, b) => lc(a.ed.vendor).localeCompare(lc(b.ed.vendor)) || (itemIso(a) || '').localeCompare(itemIso(b) || '') || lc(a.driveName).localeCompare(lc(b.driveName)));
     S.pend = out; S.selPend = null; pendRender(); st.textContent = '';
-    log(`Pendientes en Drive: ${out.length} archivo(s) en «En proceso»` + (non.length ? `, ${non.length} con nombre no estándar` : '') + (S.nonStd.some(f => f.dirId !== dir) ? ' (hay archivos con nombre no estándar en carpetas «Conciliados»; no se tocan)' : '') + '.', 'o'); }
+    log(`Drive · «${fname}»: ${out.length} archivo(s)` + (non.length ? `, ${non.length} con nombre no estándar` : '') + (S.nonStd.some(f => f.dirId !== dir) ? ' (hay archivos con nombre no estándar en carpetas «Conciliados»; no se tocan)' : '') + '.', 'o'); }
   catch (e) { st.textContent = ''; log('No pude consultar Drive: ' + e.message, 'e'); } finally { btn.disabled = false; } }
-function regTouch(it, oldName, patch) { let en = S.registry.entries.find(e => e.savedName === oldName && e.folder === 'En proceso'); if (!en) { en = {hash: it.hash || null, originalName: oldName, savedName: oldName, vendor: itemVendor(it), date: itemIso(it), amount: itemCents(it) / 100, savedAt: null, folder: 'En proceso', status: 'En proceso'}; S.registry.entries.push(en); } Object.assign(en, patch); return en; }
+function regTouch(it, oldName, patch) { const fn = it.folderName || 'En proceso'; let en = S.registry.entries.find(e => e.savedName === oldName && e.folder === fn); if (!en) { en = {hash: it.hash || null, originalName: oldName, savedName: oldName, vendor: itemVendor(it), date: itemIso(it), amount: itemCents(it) / 100, savedAt: null, folder: fn, status: fn}; S.registry.entries.push(en); } Object.assign(en, patch); return en; }
 async function pendRefreshAfter() { rebuildIndex(); persistVendors(); renderVendors(); if (!await saveRegistry()) log('ATENCIÓN: los cambios se hicieron en Drive pero el registro no se pudo guardar. Repite «Consultar Drive» más tarde.', 'e'); await refreshSupports(); if (S.result && S.qbo && !S.qbo.err) await runReconcile(); pendRender(); }
 async function pendApply() { const list = S.pend.filter(i => i.selected && itemValid(i) && pendDirty(i)); if (!list.length) return; const btn = $('#pdApply'); btn.disabled = true; let ok = 0;
-  try { await Drive.session(); const live = new Set((await Drive.list(S.enProceso.id)).map(f => lc(f.name)));
+  try { await Drive.session(); const live = new Set((await Drive.list(S.pdDir || S.enProceso.id)).map(f => lc(f.name)));
     for (const it of list) { try { const old = it.driveName, name = pendTarget(it, live); if (lc(name) === lc(old)) continue; const vendor = itemVendor(it), iso = itemIso(it), cents = itemCents(it);
         await Drive.rename(it.driveId, name); live.delete(lc(old)); live.add(lc(name)); addVendorIfNew(vendor, it.ed.vendor.trim());
         regTouch(it, old, {savedName: name, vendor, date: iso, amount: cents / 100, edited: true, editedAt: new Date().toISOString(), editedBy: S.cfg.operator || null, complement: /_C\d+\.[A-Za-z0-9]+$/.test(name) || undefined});
@@ -925,27 +926,27 @@ async function pendToDup() { const list = S.pend.filter(i => i.selected); if (!l
   if (!confirm(`¿Mover ${list.length} archivo(s) a la carpeta «_Duplicados» de Drive? No se borran: quedan guardados ahí y dejan de participar en la conciliación.`)) return; const btn = $('#pdDup'); btn.disabled = true; let ok = 0;
   try { await Drive.session(); const dup = await Drive.sub(S.root.id, '_Duplicados'); const names = new Set((await Drive.list(dup.id)).map(f => lc(f.name)));
     for (const it of list) { try { let nm = it.driveName; if (names.has(lc(nm))) { const b = nm.replace(/(\.[A-Za-z0-9]+)$/, ''), ext = extOf(nm); let k = 2; while (names.has(lc(`${b}_${k}${ext}`))) k++; nm = `${b}_${k}${ext}`; }
-        await Drive.move(it.driveId, S.enProceso.id, dup.id, nm !== it.driveName ? nm : null); names.add(lc(nm));
+        await Drive.move(it.driveId, it.dirId || S.enProceso.id, dup.id, nm !== it.driveName ? nm : null); names.add(lc(nm));
         const en = regTouch(it, it.driveName, {}); en.savedName = nm; en.folder = '_Duplicados'; en.status = 'Duplicado'; en.movedAt = new Date().toISOString(); en.movedBy = S.cfg.operator || null;
         S.pend = S.pend.filter(x => x !== it); ok++; log(`Movido a _Duplicados: ${it.driveName}` + (nm !== it.driveName ? ' → ' + nm : ''), 'o'); }
       catch (e) { log(`No se pudo mover «${it.driveName}»: ${e.message}` + (e.status === 404 ? ' (ya no está en En proceso: ¿otra sesión lo movió?)' : ''), 'e'); } }
     log(`Resultado: ${ok} de ${list.length} archivo(s) movidos a «_Duplicados».`, ok === list.length ? 'o' : 'w'); await pendRefreshAfter(); }
   catch (e) { log('Error al mover a _Duplicados: ' + e.message, 'e'); pendRender(); } }
-async function pendMove() { const sel = S.pend.filter(i => i.selected); if (!sel.length) return; const st = $('#pdStatus'), stop = m => { st.textContent = m; log(m, 'w'); if (!S.result || !S.qbo) $('button[data-tab=conc]').click(); };
-  if (!S.result || !S.qbo) return stop('Primero carga el Excel de QBO en «3. Conciliar con QBO» y pulsa «Conciliar»; luego vuelve aquí a mover.');
-  const dirty = sel.filter(i => itemValid(i) && pendDirty(i)); if (dirty.length) return stop(`Aplica primero los cambios en Drive de ${dirty.length} archivo(s) seleccionado(s) («Aplicar cambios en Drive») y vuelve a concilar si hace falta.`);
-  const pairs = new Map(), skip = []; sel.forEach(i => { const r = pendRecon(i); if (r && r.p) pairs.set(r.p, r); else skip.push(i); });
-  if (!pairs.size) return stop('Ninguno de los archivos tildados tiene transacción en QBO en la última conciliación (están «Sin transacción» o fuera del periodo). Corrige vendor, fecha o monto, o cambia el periodo en el paso 3.');
-  const jobs = [], per = {}; pairs.forEach((r, p) => { const folder = `Conciliados ${p.t.iso.slice(5, 7)}-${p.t.iso.slice(0, 4)}`; if (!p.s.locked) { jobs.push({p, s: p.s, folder: null}); per[folder] = (per[folder] || 0) + 1; } (p.comps || []).forEach(c => { if (!c.locked) { jobs.push({p, s: c, folder}); per[folder] = (per[folder] || 0) + 1; } }); });
-  if (!jobs.length) return stop('Los archivos tildados ya estaban conciliados y movidos.');
-  const diffs = [...pairs.keys()].filter(p => p.status !== 'CONCILIADO' && p.status !== 'OTRO_MES').length, otro = [...pairs.keys()].filter(p => p.status === 'OTRO_MES').length;
-  const txt = `¿Mover ${jobs.length} archivo(s) a su carpeta del mes (según la fecha de QBO)?\n\n` + Object.entries(per).sort().map(([k, n]) => `  • ${k}: ${n}`).join('\n') + (otro ? `\n\n${otro} corresponde(n) a otro mes según el Excel de QBO (vendor y monto exactos): se concilian y mueven a la carpeta de ese mes.` : '') + (diffs ? `\n\nATENCIÓN: ${diffs} de ellos tienen diferencias con QBO (monto, fecha o vendor). Al tildarlos tú los das por buenos y quedan registrados como conciliados manualmente.` : '') + (skip.length ? `\n\n${skip.length} archivo(s) tildado(s) sin transacción en QBO NO se moverán.` : '');
-  if (!confirm(txt)) return; skip.forEach(i => log(`No se movió «${i.driveName}»: sin transacción en QBO en la última conciliación.`, 'w'));
-  await moveMatched(jobs);
-  try { const live = new Set((await Drive.list(S.enProceso.id)).map(f => f.id)); S.pend = S.pend.filter(i => live.has(i.driveId)); } catch (e) { log('No pude refrescar la lista; pulsa «Consultar Drive».', 'w'); }
-  pendRender(); }
-$('#pdBody').closest('.card').addEventListener('click', e => { if (e.target.id === 'pdGo3') $('button[data-tab=conc]').click(); });
-$('#pdLoad').onclick = pendLoad; $('#pdMove').onclick = pendMove; $('#pdApply').onclick = pendApply; $('#pdDup').onclick = pendToDup;
+async function pendPromote() { const sel = S.pend.filter(i => i.selected); if (!sel.length) return; const back = S.pdFolder === 'Por conciliar', destName = back ? 'En proceso' : 'Por conciliar', dest = back ? S.enProceso : S.porConc, st = $('#pdStatus');
+  const bad = sel.filter(i => !itemValid(i)); if (bad.length) { st.textContent = `Completa vendor, fecha (MM/DD/AAAA) y monto de ${bad.length} archivo(s) tildado(s) antes de pasarlos.`; log(st.textContent, 'w'); return; }
+  const dups = sel.filter(i => !i.complement && (i.status === 'duplicado' || pendDup(i))).length;
+  if (!confirm(`¿${back ? 'Devolver' : 'Pasar'} ${sel.length} archivo(s) a la carpeta «${destName}»?` + (back ? '' : '\n\nSe renombran con el vendor, fecha y monto de la fila si hace falta. Desde ahí entran a la conciliación del paso 3.') + (dups ? `\n\nATENCIÓN: ${dups} de ellos parecen duplicados de otro de la lista. Si sobra alguno, cancela y mándalo a «_Duplicados».` : ''))) return;
+  const btn = $('#pdPromote'); btn.disabled = true; let ok = 0;
+  try { await Drive.session(); const live = new Set((await Drive.list(dest.id)).map(f => lc(f.name)));
+    for (const it of sel) { try { const old = it.driveName, nm = pendTarget(it, live), vendor = itemVendor(it), iso = itemIso(it), cents = itemCents(it);
+        await Drive.move(it.driveId, it.dirId || S.enProceso.id, dest.id, lc(nm) !== lc(old) ? nm : null); live.add(lc(nm)); addVendorIfNew(vendor, it.ed.vendor.trim());
+        const en = regTouch(it, old, {}); Object.assign(en, {savedName: nm, vendor, date: iso, amount: cents / 100, folder: destName, status: destName, movedAt: new Date().toISOString(), movedBy: S.cfg.operator || null, complement: /_C\d+\.[A-Za-z0-9]+$/.test(nm) || undefined}); if (lc(nm) !== lc(old)) { en.edited = true; en.editedAt = en.movedAt; en.editedBy = en.movedBy; }
+        S.pend = S.pend.filter(x => x !== it); ok++; log(`${back ? 'Devuelto' : 'Pasado'} a «${destName}»: ${old}` + (lc(nm) !== lc(old) ? '  →  ' + nm : ''), 'o'); }
+      catch (e) { log(`No se pudo mover «${it.driveName}»: ${e.message}` + (e.status === 404 ? ' (ya no está en esa carpeta: ¿otra sesión lo movió?)' : ''), 'e'); } }
+    log(`Resultado: ${ok} de ${sel.length} archivo(s) ${back ? 'devueltos a «Por identificar»' : 'pasados a «Por conciliar»'}.`, ok === sel.length ? 'o' : 'w'); await pendRefreshAfter(); }
+  catch (e) { log('Error al mover: ' + e.message, 'e'); pendRender(); } }
+$('#pdFolder').onchange = pendLoad;
+$('#pdLoad').onclick = pendLoad; $('#pdPromote').onclick = pendPromote; $('#pdApply').onclick = pendApply; $('#pdDup').onclick = pendToDup;
 $('#pdOcr').onclick = () => runOcr(S.pend.filter(i => i.needsOcr), '#pdOcr', '#pdStatus', () => pendRender());
 $('#pdSelAll').onclick = () => { pendVisible().forEach(i => { i.selected = true; }); pendRender(); }; $('#pdSelNone').onclick = () => { S.pend.forEach(i => { i.selected = false; }); pendRender(); };
 $('#pdFilter').onchange = pendRender; $('#pdQ').oninput = pendRender;
@@ -968,13 +969,13 @@ async function refreshSupports() { const mySeq = ++rsSeq, sup = [], non = [];
   if (!S.root) { S.supports = []; S.nonStd = []; $('#concSupports').textContent = 'Conecta con Google Drive para ver los soportes.'; return; }
   try { const allowed = ['.pdf', ...IMG_EXT]; const load = async (dirId, folder, locked) => { for (const f of await Drive.list(dirId)) { if (f.kind !== 'file' || !allowed.includes(extOf(f.name))) continue; const p = Core.parseName(f.name);
       if (!p) { non.push({name: f.name, folder, fid: f.id, dirId}); continue; } sup.push({id: folder + '/' + f.name, name: f.name, folder, locked, comp: !!p.comp, vendor: p.vendor, iso: p.iso, cents: p.cents, fid: f.id, dirId}); } };
-    await load(S.enProceso.id, 'En proceso', false);
+    await load(S.enProceso.id, 'En proceso', false); await load(S.porConc.id, 'Por conciliar', false);
     for (const d of await Drive.list(S.root.id)) if (d.kind === 'directory' && /^Conciliados \d{2}-\d{4}$/.test(d.name)) await load(d.id, d.name, true); }
   catch (e) { log('No pude leer la carpeta de Drive: ' + e.message, 'e'); $('#concSupports').innerHTML = `<div class="alert err">No pude leer Drive: ${esc(e.message)}</div>`; return; }
   if (mySeq !== rsSeq) return; S.supports = sup; S.nonStd = non;
   S.supports.sort((a, b) => (a.folder < b.folder ? -1 : a.folder > b.folder ? 1 : 0) || (a.name < b.name ? -1 : a.name > b.name ? 1 : 0));
-  const en = S.supports.filter(s => !s.locked).length, lk = S.supports.length - en;
-  $('#concSupports').innerHTML = `<b>${en}</b> soporte(s) en «En proceso» · <b>${lk}</b> ya conciliado(s) en carpetas «Conciliados MM-AAAA»` + (S.nonStd.length ? `<div class="alert warn">${S.nonStd.length} archivo(s) no siguen el formato <code>Vendor_MM-DD-AAAA_monto.ext</code> y se excluyen de la conciliación: ${S.nonStd.slice(0, 8).map(x => esc(x.folder + '/' + x.name)).join('; ')}${S.nonStd.length > 8 ? '…' : ''}</div>` : ''); }
+  const pc = S.supports.filter(s => s.folder === 'Por conciliar'), ep = S.supports.filter(s => s.folder === 'En proceso').length, lk = S.supports.filter(s => s.locked).length;
+  $('#concSupports').innerHTML = `<b>${pc.length}</b> soporte(s) en «Por conciliar» (los que entran a esta conciliación) · <b>${lk}</b> ya conciliado(s) en «Conciliados MM-AAAA»` + (ep ? ` · ${ep} en «En proceso» (por identificar: no entran; se pasan a «Por conciliar» en el paso 2)` : '') + (pc.length ? `<details class="cols"><summary>Ver los ${pc.length} archivo(s) de «Por conciliar»</summary><div class="src" style="line-height:1.7">${pc.map(x => supLink(x)).join('<br>')}</div></details>` : '') + (S.nonStd.length ? `<div class="alert warn">${S.nonStd.length} archivo(s) no siguen el formato <code>Vendor_MM-DD-AAAA_monto.ext</code> y se excluyen de la conciliación: ${S.nonStd.slice(0, 8).map(x => esc(x.folder + '/' + x.name)).join('; ')}${S.nonStd.length > 8 ? '…' : ''}</div>` : ''); }
 $('#btnRescan').onclick = async () => { try { await Drive.session(); await flushVendors(); await refreshRegistry(); } catch (e) { log('No pude sincronizar con Drive: ' + e.message, 'e'); } await refreshSupports(); log('Carpeta de Drive releída.'); };
 
 async function loadQbo(f) { $('#xlsName').textContent = f.name; $('#xlsName2').textContent = f.name;
@@ -1025,7 +1026,7 @@ async function runReconcile() {
   if (!tx.length) { $('#resultPanel').innerHTML = '<div class="alert err">No hay transacciones de los tipos seleccionados.</div>'; return; }
   if (S.consolidate) tx = Core.consolidate(tx, S.vIndex);
   const prior = new Map(); S.registry.entries.forEach(en => { if (en.qbo && en.qbo.sig) prior.set(en.folder + '/' + en.savedName, en.qbo.sig); });
-  let supports = S.supports.map(s => ({...s})); if (P0.from) supports = supports.filter(s => s.iso >= shift(P0.from, -60)); if (P0.to) supports = supports.filter(s => s.iso <= shift(P0.to, 60));
+  let supports = S.supports.filter(s => s.locked || s.folder === 'Por conciliar').map(s => ({...s})); if (P0.from) supports = supports.filter(s => s.iso >= shift(P0.from, -60)); if (P0.to) supports = supports.filter(s => s.iso <= shift(P0.to, 60));
   const res = Core.reconcile(tx, supports, {tolDays: S.tol, reviewWindow: 45, vIndex: S.vIndex, prior});
   { const inP = new Set(tx.map(t => t.id)), inPer = t => (!P0.from || t.iso >= P0.from) && (!P0.to || t.iso <= P0.to), vk = v => Core.normName(Core.canonVendor(v, S.vIndex)), used = new Set([...prior.values()]);
     const out = (P0.from || P0.to) ? q.all.filter(t => q.include.has(t.typeNorm || '(sin tipo)') && !inP.has(t.id) && !inPer(t)) : [];
@@ -1033,7 +1034,7 @@ async function runReconcile() {
       const hit = out.filter(t => t.cents === x.s._abs && vk(t.vendor) === vk(x.s.vendor) && !used.has(Core.sigOf(t, S.vIndex))).sort((a, b) => dd(a) - dd(b))[0]; if (!hit) return;
       const near = dd(hit) <= 45, folder = `Conciliados ${hit.iso.slice(5, 7)}-${hit.iso.slice(0, 4)}`; x.outside = hit; used.add(Core.sigOf(hit, S.vIndex));
       const desc = `${hit.type}${hit.num ? ' #' + hit.num : ''} · ${hit.vendor} · USD ${Core.money(hit.cents)} · ${Core.fmtUS(hit.iso)}`;
-      if (near) { x.why = `Corresponde a otro mes: SÍ existe en el Excel fuera del periodo elegido → ${desc}. Sugerido: conciliar y mover a «${folder}» (paso 2 «Revisar en Drive»: tilda el archivo y pulsa «Conciliar y mover al mes»).`; x.pair = {s: x.s, t: hit, status: 'OTRO_MES', why: x.why, comps: [], accept: false, dsd: Core.dayNum(x.s.iso) - Core.dayNum(hit.iso), dc: 0, folder}; }
+      if (near) { x.why = `Corresponde a otro mes: SÍ existe en el Excel fuera del periodo elegido → ${desc}. Sugerido: conciliar y mover a «${folder}» (en «Soportes sin transacción»: tilda ✓ y pulsa «Mover»).`; x.pair = {s: x.s, t: hit, status: 'OTRO_MES', why: x.why, comps: [], accept: false, dsd: Core.dayNum(x.s.iso) - Core.dayNum(hit.iso), dc: 0, folder}; }
       else x.why = `Existe en el Excel fuera del periodo, pero con fecha lejana (${desc}). Verifica que sea el mismo documento antes de usarlo.`; }); }
   res.pairs.forEach(p => { p.accept = p.status === 'CONCILIADO' && !p.s.locked; }); S.result = {res, tx, sum: Core.summarize(res, tx), tol: S.tol, ran: new Date(), period: {...P0}}; S.view = 'CONCILIADO'; renderResult();
   log(`Conciliación: ${tx.length} transacciones vs ${supports.length} soportes → conciliadas ${S.result.sum.conc.n}, por revisar ${S.result.sum.rev.n}, pendientes ${S.result.sum.pend.n}, soportes sin transacción ${S.result.sum.sin.n}.`, S.result.sum.control ? 'o' : 'e'); }
@@ -1042,11 +1043,13 @@ const LBL = {CONCILIADO: 'Conciliado', FECHA_FUERA: 'Fecha fuera de tolerancia',
 function renderResult() { const R = S.result, s = R.sum, m = Core.money; const kp = (cls, n, t, c) => `<div class="kpi ${cls}"><div class="n">${n}</div><div class="t">${t}</div><div class="m">${c != null ? 'USD ' + m(c) : ''}</div></div>`;
   const toMove = movePlan(R).length, nOtro = R.res.sin.filter(x => x.pair).length;
   let h = `<div class="card"><h2>Resultado de la conciliación</h2><div class="cards">${kp('info', s.total.n, 'Transacciones QBO analizadas', s.total.c)}${kp('ok', s.conc.n, 'Conciliadas' + (s.conc.prev ? ` (${s.conc.prev} de corridas previas)` : '') + (s.comps ? ` · con ${s.comps} complemento(s)` : ''), s.conc.c)}${kp('warn', s.rev.n, 'Por revisar (coinciden parcialmente)', s.rev.c)}${kp('bad', s.pend.n, 'Pendientes de recibir', s.pend.c)}${kp('bad', s.sin.n, 'Soportes sin transacción en QBO', s.sin.c)}</div>
-  ${nOtro ? `<div class="alert warn"><b>${nOtro} soporte(s) corresponden a otro mes</b> según el Excel (están en QBO fuera del periodo elegido). Ve a «2. Revisar en Drive», tilda los y pulsa «Conciliar y mover al mes»: se envían a la carpeta del mes de su fecha en QBO. Detalle en «Soportes sin transacción».</div>` : ''}
+  ${nOtro ? `<div class="alert warn"><b>${nOtro} soporte(s) corresponden a otro mes</b> según el Excel (su partida está fuera del periodo elegido). Ábrelos en «Soportes sin transacción», tilda ✓ los que verificaste y pulsa «Mover»: se envían a la carpeta del mes de su fecha en QBO.</div>` : ''}
   <div class="alert ${s.control ? 'ok' : 'err'}">Control de suma: QBO ${m(s.total.c)} = Conciliado ${m(s.conc.c)} + Por revisar ${m(s.rev.c)} + Pendiente ${m(s.pend.c)} → ${s.control ? 'CUADRA' : 'NO CUADRA (revisar lógica)'}</div>
   <div class="row"><button class="btn" id="btnMove" ${toMove ? '' : 'disabled'}>Mover ${toMove} soporte(s) a «Conciliados»</button><button class="btn sec" id="btnXls">Descargar reporte Excel</button><button class="btn sec" id="btnCopyPend">Copiar lista de pendientes</button><span class="src">Tolerancia de fecha: ±${R.tol} días · Solo se mueven los «Conciliado» y los «Por revisar» que marques con ✓.</span></div>
   <div class="sub-tabs">${[['CONCILIADO', 'Conciliados', s.conc.n], ['REVISAR', 'Por revisar', s.rev.n], ['PENDIENTE', 'Pendientes de recibir', s.pend.n], ['PEND_VENDOR', 'Pendientes por vendor', ''], ['SIN_TXN', 'Soportes sin transacción', s.sin.n]].map(([k, l, n]) => `<button data-view="${k}" class="${S.view === k ? 'on' : ''}">${l}${n !== '' ? ' (' + n + ')' : ''}</button>`).join('')}</div><div id="resTable"></div></div>`;
   $('#resultPanel').innerHTML = h; renderResTable(); }
+function supOpen(e) { const a = e.target.closest('a.supv'); if (!a) return false; e.preventDefault(); S.supPrev = S.supPrev || new Map(); let it = S.supPrev.get(a.dataset.fid); if (!it) { const ext = extOf(a.dataset.name); it = {id: 'S' + a.dataset.fid, name: a.dataset.name, driveId: a.dataset.fid, ext, kind: ext === '.pdf' ? 'pdf' : 'img', buf: null}; S.supPrev.set(a.dataset.fid, it); } openLightbox(it); return true; }
+$('#concSupports').addEventListener('click', supOpen);
 const supLink = s => s.fid ? `<a href="#" class="view supv" data-fid="${esc(s.fid)}" data-name="${esc(s.name)}" title="Ver el archivo (vista previa ampliada)">${esc(s.name)}</a>` : esc(s.name);
 function pairRow(p, withChk) { const t = p.t, sp = p.s; return `<tr data-t="${esc(t.id)}"><td>${withChk ? `<input type="checkbox" class="acc" ${p.accept ? 'checked' : ''}>` : ''}</td><td><span class="badge ${p.s.locked ? 'YA' : p.status}">${p.s.locked ? 'Ya conciliado' : LBL[p.status]}</span></td><td>${Core.fmtUS(t.iso)}</td><td>${esc(t.type)}</td><td>${esc(t.num)}</td><td>${esc(t.vendor)}</td><td class="num">${Core.money(t._abs)}</td><td>${supLink(sp)}<div class="src">${esc(sp.folder)}</div>${(p.comps || []).map(c => `<div class="src">+ complemento: ${supLink(c)} (${esc(c.folder)})</div>`).join('')}</td><td class="num">${Core.money(sp._abs)}</td><td class="num">${p.dsd > 0 ? '+' : ''}${p.dsd}</td><td class="num">${p.dc === 0 ? '0.00' : (p.dc > 0 ? '+' : '') + Core.money(p.dc)}</td><td class="src">${esc(p.why)}</td></tr>`; }
 function renderResTable() { const R = S.result.res, v = S.view; let h = '';
@@ -1056,12 +1059,12 @@ function renderResTable() { const R = S.result.res, v = S.view; let h = '';
   else if (v === 'PENDIENTE') h = `<div class="tblwrap"><table><thead><tr><th>Fecha</th><th>Tipo</th><th>Núm</th><th>Vendor</th><th class="num">Monto USD</th><th>Memo</th><th>Motivo / fila Excel</th></tr></thead><tbody>${R.pend.map(x => `<tr><td>${Core.fmtUS(x.t.iso)}</td><td>${esc(x.t.type)}</td><td>${esc(x.t.num)}</td><td>${esc(x.t.vendor)}</td><td class="num">${Core.money(x.t._abs)}</td><td>${esc(x.t.memo)}</td><td class="src">${esc(x.why)} · fila ${x.t.rowNum}</td></tr>`).join('') || '<tr><td colspan="7" class="empty">No hay pendientes</td></tr>'}</tbody></table></div>`;
   else if (v === 'PEND_VENDOR') { const g = {}; R.pend.forEach(x => { const k = x.t.vendor || '(sin vendor)'; (g[k] = g[k] || {n: 0, c: 0}); g[k].n++; g[k].c += x.t._abs; });
     h = `<div class="tblwrap"><table><thead><tr><th>Vendor</th><th class="num">Soportes pendientes</th><th class="num">Monto USD</th></tr></thead><tbody>${Object.entries(g).sort((a, b) => b[1].c - a[1].c).map(([k, x]) => `<tr><td>${esc(k)}</td><td class="num">${x.n}</td><td class="num">${Core.money(x.c)}</td></tr>`).join('') || '<tr><td colspan="3" class="empty">No hay pendientes</td></tr>'}</tbody></table></div>`; }
-  else h = `<div class="tblwrap"><table><thead><tr><th>Archivo</th><th>Carpeta</th><th>Vendor</th><th>Fecha</th><th class="num">Monto USD</th><th>Motivo</th></tr></thead><tbody>${R.sin.map(x => `<tr><td>${supLink(x.s)}</td><td>${esc(x.s.folder)}</td><td>${esc(x.s.vendor)}</td><td>${Core.fmtUS(x.s.iso)}</td><td class="num">${Core.money(x.s._abs)}</td><td class="src">${esc(x.why)}</td></tr>`).join('') || '<tr><td colspan="6" class="empty">Todos los soportes tienen transacción</td></tr>'}</tbody></table></div>`;
+  else h = `${R.sin.some(x => x.pair) ? '<div class="alert info">Los marcados «Corresponde a otro mes» tienen su partida en el Excel fuera del periodo elegido. Tilda ✓ los que verificaste y pulsa «Mover»: se envían a «Conciliados MM-AAAA» del mes de su fecha en QBO.</div>' : ''}<div class="tblwrap"><table><thead><tr><th>✓</th><th>Archivo</th><th>Carpeta</th><th>Vendor</th><th>Fecha</th><th class="num">Monto USD</th><th>Motivo</th></tr></thead><tbody>${R.sin.map(x => `<tr data-sid="${esc(x.s.id)}"><td>${x.pair ? `<input type="checkbox" class="accs" ${x.pair.accept ? 'checked' : ''}>` : ''}</td><td>${supLink(x.s)}</td><td>${esc(x.s.folder)}</td><td>${esc(x.s.vendor)}</td><td>${Core.fmtUS(x.s.iso)}</td><td class="num">${Core.money(x.s._abs)}</td><td class="src">${esc(x.why)}</td></tr>`).join('') || '<tr><td colspan="7" class="empty">Todos los soportes tienen transacción</td></tr>'}</tbody></table></div>`;
   $('#resTable').innerHTML = h; }
-$('#resultPanel').addEventListener('click', e => { const a = e.target.closest('a.supv'); if (a) { e.preventDefault(); S.supPrev = S.supPrev || new Map(); let it = S.supPrev.get(a.dataset.fid); if (!it) { const ext = extOf(a.dataset.name); it = {id: 'S' + a.dataset.fid, name: a.dataset.name, driveId: a.dataset.fid, ext, kind: ext === '.pdf' ? 'pdf' : 'img', buf: null}; S.supPrev.set(a.dataset.fid, it); } openLightbox(it); return; }
+$('#resultPanel').addEventListener('click', e => { if (supOpen(e)) return;
   const b = e.target.closest('[data-view]'); if (b) { S.view = b.dataset.view; $$('#resultPanel [data-view]').forEach(x => x.classList.toggle('on', x === b)); renderResTable(); }
   if (e.target.id === 'btnMove') moveMatched(); if (e.target.id === 'btnXls') downloadReport(); if (e.target.id === 'btnCopyPend') copyPending(); });
-$('#resultPanel').addEventListener('change', e => { if (!e.target.classList.contains('acc')) return; const id = e.target.closest('tr').dataset.t; const p = S.result.res.pairs.find(x => x.t.id === id); if (p) p.accept = e.target.checked; const n = movePlan(S.result).length; const bm = $('#btnMove'); bm.disabled = !n; bm.textContent = `Mover ${n} soporte(s) a «Conciliados»`; });
+$('#resultPanel').addEventListener('change', e => { if (!e.target.classList.contains('acc') && !e.target.classList.contains('accs')) return; if (e.target.classList.contains('accs')) { const x = S.result.res.sin.find(y => y.s.id === e.target.closest('tr').dataset.sid); if (x && x.pair) x.pair.accept = e.target.checked; } else { const id = e.target.closest('tr').dataset.t; const p = S.result.res.pairs.find(x => x.t.id === id); if (p) p.accept = e.target.checked; } const n = movePlan(S.result).length; const bm = $('#btnMove'); bm.disabled = !n; bm.textContent = `Mover ${n} soporte(s) a «Conciliados»`; });
 
 async function copyPending() { const R = S.result.res; const g = {}; R.pend.forEach(x => (g[x.t.vendor || '(sin vendor)'] = g[x.t.vendor || '(sin vendor)'] || []).push(x.t));
   const txt = 'Soportes pendientes de recibir:\n\n' + Object.entries(g).sort().map(([k, a]) => k + '\n' + a.map(t => `  - ${Core.fmtUS(t.iso)}  ${t.type}${t.num ? ' #' + t.num : ''}  USD ${Core.money(t._abs)}`).join('\n')).join('\n\n');
@@ -1074,13 +1077,13 @@ async function moveMatched(todoIn) {
   for (const j of todo) { const p = j.p, sup = j.s; try { const mo = p.t.iso.slice(5, 7), yr = p.t.iso.slice(0, 4); const folder = j.folder || `Conciliados ${mo}-${yr}`; let d = dests.get(folder);
       if (!d) { const dir = await Drive.sub(S.root.id, folder); d = {dir, names: new Set((await Drive.list(dir.id)).map(f => f.name.toLowerCase()))}; dests.set(folder, d); }
       let name = sup.name; if (d.names.has(name.toLowerCase())) { let k = 2; const base = name.replace(/(\.[A-Za-z0-9]+)$/, ''), ext = extOf(name); while (d.names.has(`${base}_${k}${ext}`.toLowerCase())) k++; name = `${base}_${k}${ext}`; }
-      await Drive.move(sup.fid, S.enProceso.id, d.dir.id, name !== sup.name ? name : null); d.names.add(name.toLowerCase()); markMoved(p, folder, name, sup, sup !== p.s); ok++; log(`Movido${sup !== p.s ? ' (complemento)' : ''}: En proceso/${sup.name}  →  ${folder}/${name}`, 'o'); }
-    catch (e) { fail++; log(`No se pudo mover «${sup.name}»: ${e.message}` + (e.status === 404 ? ' (el archivo ya no está en En proceso: ¿otra sesión lo movió?)' : ''), 'e'); } }
+      await Drive.move(sup.fid, sup.dirId || S.porConc.id, d.dir.id, name !== sup.name ? name : null); d.names.add(name.toLowerCase()); markMoved(p, folder, name, sup, sup !== p.s); ok++; log(`Movido${sup !== p.s ? ' (complemento)' : ''}: ${sup.folder}/${sup.name}  →  ${folder}/${name}`, 'o'); }
+    catch (e) { fail++; log(`No se pudo mover «${sup.name}»: ${e.message}` + (e.status === 404 ? ' (el archivo ya no está en su carpeta: ¿otra sesión lo movió?)' : ''), 'e'); } }
   if (ok && !await saveRegistry()) log('ATENCIÓN: los archivos se movieron pero el registro no se pudo guardar; vuelve a pulsar «Releer carpeta» y repite si hace falta.', 'e');
   try { const bytes = await buildReportBytes(); const rep = await Drive.sub(S.ctrl.id, 'Reportes'); const stamp = new Date().toISOString().slice(0, 16).replace(/[:T]/g, '-'); await Drive.upload(rep.id, `Conciliacion_${stamp}.xlsx`, new Blob([bytes]), 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'); log(`Reporte de evidencia guardado en _Control/Reportes/Conciliacion_${stamp}.xlsx`, 'o'); } catch (e) { log('No pude guardar el reporte en _Control: ' + e.message, 'w'); }
   log(`Movimiento terminado: ${ok} movidos, ${fail} con error.`, fail ? 'w' : 'o'); await refreshSupports(); await runReconcile(); }
-function movePlan(R) { const jobs = []; R.res.pairs.forEach(p => { const accepted = p.accept || (p.s.locked && p.status === 'CONCILIADO'); if (!accepted) return; const mine = p.s.locked ? p.s.folder : `Conciliados ${p.t.iso.slice(5, 7)}-${p.t.iso.slice(0, 4)}`; if (!p.s.locked) jobs.push({p, s: p.s, folder: null}); (p.comps || []).forEach(c => { if (!c.locked) jobs.push({p, s: c, folder: mine}); }); }); return jobs; }
-function markMoved(p, folder, name, sup, isComp) { sup = sup || p.s; const sig = Core.sigOf(p.t, S.vIndex); let en = S.registry.entries.find(e => e.savedName === sup.name && e.folder === 'En proceso');
+function movePlan(R) { const jobs = []; R.res.sin.forEach(x => { if (x.pair && x.pair.accept && !x.s.locked) jobs.push({p: x.pair, s: x.s, folder: null}); }); R.res.pairs.forEach(p => { const accepted = p.accept || (p.s.locked && p.status === 'CONCILIADO'); if (!accepted) return; const mine = p.s.locked ? p.s.folder : `Conciliados ${p.t.iso.slice(5, 7)}-${p.t.iso.slice(0, 4)}`; if (!p.s.locked) jobs.push({p, s: p.s, folder: null}); (p.comps || []).forEach(c => { if (!c.locked) jobs.push({p, s: c, folder: mine}); }); }); return jobs; }
+function markMoved(p, folder, name, sup, isComp) { sup = sup || p.s; const sig = Core.sigOf(p.t, S.vIndex); let en = S.registry.entries.find(e => e.savedName === sup.name && e.folder === (sup.folder || 'En proceso'));
   if (!en) { en = {hash: null, originalName: sup.name, savedName: sup.name, vendor: sup.vendor, date: sup.iso, amount: sup._abs / 100, savedAt: null}; S.registry.entries.push(en); } if (isComp) en.complement = true;
   en.savedName = name; en.folder = folder; en.status = 'Conciliado'; en.movedAt = new Date().toISOString(); en.movedBy = S.cfg.operator || null; en.manual = p.status !== 'CONCILIADO'; en.qbo = {sig, type: p.t.type, num: p.t.num, date: p.t.iso, amount: p.t._abs / 100, vendor: p.t.vendor, row: p.t.rowNum, excel: S.qbo.fileName, matchStatus: p.status}; }
 
@@ -1158,12 +1161,12 @@ async function downloadReport() { try { const bytes = await buildReportBytes(); 
    AYUDA Y AUTOPRUEBA
    ===================================================================== */
 $('#helpBody').innerHTML = `
-<div class="alert info"><b>Resumen en 3 pasos.</b><br><b>1 · Subir soportes:</b> arrastra PDF o fotos (o busca en Gmail), revisa y guarda en «En proceso».<br><b>2 · Revisar en Drive:</b> consulta lo guardado, corrige nombre, vendor, fecha o monto, y manda duplicados a «_Duplicados».<br><b>3 · Conciliar con QBO:</b> carga el Excel, elige el mes, concilia y mueve a «Conciliados MM-AAAA».</div>
+<div class="alert info"><b>Resumen en 3 pasos.</b><br><b>1 · Subir soportes:</b> arrastra PDF o fotos (o busca en Gmail), revisa y guarda en «En proceso».<br><b>2 · Por identificar:</b> consulta «En proceso», corrige vendor, fecha o monto, y pasa lo verificado a «Por conciliar» (duplicados a «_Duplicados»).<br><b>3 · Conciliar con QBO:</b> carga el Excel, elige el mes, concilia y mueve a «Conciliados MM-AAAA».</div>
 <h2>Cómo se usa</h2>
 <h3>Preparación (una sola vez)</h3>
 <ol><li>Usa <b>Google Chrome o Microsoft Edge</b> y entra siempre con la <b>cuenta de resguardo</b> (la misma para quien cubra las vacaciones).</li>
 <li>Abre «Conexión con Google», pega el <b>Client ID</b> (ver la guía de configuración) y escribe tu nombre en «Operador».</li>
-<li>Pulsa «Conectar con Google Drive». Si la carpeta raíz no existe, la herramienta pide confirmación y la crea con <code>En proceso</code> y <code>_Control</code>. Después se crean <code>Conciliados MM-AAAA</code> (uno por mes de la transacción).</li>
+<li>Pulsa «Conectar con Google Drive». Si la carpeta raíz no existe, la herramienta pide confirmación y la crea con <code>En proceso</code> (por identificar), <code>Por conciliar</code> y <code>_Control</code>. Después se crean <code>Conciliados MM-AAAA</code> (uno por mes de la transacción).</li>
 <li>Pulsa «Probar conexión»: debe terminar en «TODO CORRECTO».</li>
 <li>En «Vendors» escribe el nombre de tu empresa en «Nombres a ignorar» y pega la lista de vendors de QBO: el nombre principal debe ser idéntico al de QBO.</li></ol>
 <h3>Relevo (vacaciones)</h3>
@@ -1171,7 +1174,8 @@ $('#helpBody').innerHTML = `
 <li>El registro y la tabla de vendors viven en <code>_Control</code> dentro de Drive, así que el relevo continúa donde quedó el anterior. Cada soporte y cada movimiento guarda quién lo hizo.</li></ul>
 <h3>Flujo diario o semanal</h3>
 <ol><li><b>Procesar:</b> arrastra los PDF, imágenes o correos .eml. La herramienta lee vendor, fecha y monto, propone el nombre <code>Vendor_MM-DD-AAAA_monto.ext</code> y marca la certeza. Revisa (la vista previa está a la derecha), corrige lo necesario y pulsa «Guardar». Los de certeza <b>baja</b> nunca se preseleccionan.</li>
-<li><b>Conciliar (al cierre o cuando quieras):</b> sube el Excel de Bills y Expenses de QBO, confirma las columnas y los tipos, y pulsa «Conciliar». Revisa los resultados y pulsa «Mover». Puedes subir el Excel acumulado varias veces: lo ya conciliado se reconoce y no se vuelve a mover.</li></ol>
+<li><b>Por identificar:</b> en el paso 2, consulta «En proceso» (lo guardado y lo subido a mano), verifica vendor, fecha y monto, y pasa lo listo a «Por conciliar».</li>
+<li><b>Conciliar (al cierre o cuando quieras):</b> sube el Excel de Bills y Expenses de QBO, confirma las columnas y los tipos, y pulsa «Conciliar»: solo entran los archivos de «Por conciliar». Revisa los resultados y pulsa «Mover» (van a «Conciliados MM-AAAA»). Puedes subir el Excel acumulado varias veces: lo ya conciliado se reconoce y no se vuelve a mover.</li></ol>
 <h3>Formato esperado del Excel de QBO</h3>
 <ul><li>Columnas obligatorias: <b>Fecha</b> (Date), <b>Vendor</b> (Name / Payee) y <b>Monto</b> (Amount / Total). Opcionales: Tipo de transacción, Número, Memo.</li>
 <li>Se aceptan títulos arriba del encabezado y filas de totales abajo (se ignoran). Formatos de fecha: MM/DD/AAAA, AAAA-MM-DD o fecha de Excel. Los montos se comparan en valor absoluto.</li></ul>
@@ -1190,12 +1194,12 @@ $('#helpBody').innerHTML = `
 <ul><li><code>_Control/registro_soportes.json</code>: cada soporte, su origen, si fue editado a mano y su partida de QBO.</li><li><code>_Control/Reportes/Conciliacion_*.xlsx</code>: reporte de cada movimiento. La bitácora de esta pantalla muestra cada acción.</li></ul>
 <h3>Ver el archivo desde los resultados</h3>
 <p>En la pestaña <b>3. Conciliar con QBO</b>, el nombre del archivo soporte (y el de sus complementos) es un enlace: al pulsarlo se abre la <b>vista previa ampliada</b> del documento (con zoom +/− y cierre con Esc) para compararlo con la partida de QBO sin salir de la pantalla.</p>
-<h3>Pendientes en Drive: administrar lo que ya está guardado</h3>
-<p>La pestaña <b>2. Revisar en Drive</b> trae, con el botón <b>«Consultar Drive»</b>, todos los archivos de «En proceso» (no conciliados), sin subir nada. Incluye los que se subieron a mano con cualquier nombre (se leen para proponer vendor, fecha y monto). Desde ahí puedes: ver la vista previa (clic para ampliar), corregir vendor, fecha y monto, marcar <b>«Es un complemento»</b>, usar <b>«Leer con OCR»</b> en los escaneos, y pulsar <b>«Aplicar cambios en Drive»</b>, que <b>renombra el archivo en su lugar</b> (no se copia). Los duplicados se mandan a la carpeta <b>«_Duplicados»</b> (nunca se borran) y dejan de participar en la conciliación. Si ya conciliaste en el paso 3, cada archivo muestra su estatus (Conciliado, Monto diferente, Sin transacción…) con la partida de QBO, y el botón <b>«Usar los datos de QBO»</b> corrige vendor, fecha y monto de un clic. Para <b>cerrar el ciclo desde esta pestaña</b>: carga el Excel y concilia en el paso 3, vuelve aquí, tilda los archivos y pulsa <b>«Conciliar y mover al mes»</b>: se mueven a «Conciliados MM-AAAA» (mes de la fecha de QBO) junto con sus complementos, quedan registrados con su partida de QBO y los «Sin transacción» no se mueven. Si tildas uno con diferencias (monto, fecha o vendor) la herramienta te lo advierte y lo registra como conciliado manualmente; al aplicar cambios la conciliación se recalcula sola. Con el acceso limitado de Drive la herramienta no ve lo subido a mano: usa «Acceso completo a Drive» (viene activado).</p>
+<h3>Carpetas de Drive y flujo (paso 2 · Por identificar)</h3>
+<p><b>En proceso</b> = archivos por identificar (los guardados desde el paso 1 y los subidos a mano). <b>Por conciliar</b> = ya verificados, esperando el Excel. <b>Conciliados MM-AAAA</b> = destino final, uno por mes de la fecha de QBO. <b>_Duplicados</b> = apartados (nunca se borran). En la pestaña <b>2. Por identificar</b>, el botón <b>«Consultar Drive»</b> trae los archivos de la carpeta elegida (con el selector «Carpeta» puedes ver «En proceso» o «Por conciliar»), sin subir nada. Incluye los subidos a mano con cualquier nombre (se leen para proponer vendor, fecha y monto). Puedes: ver la vista previa (clic para ampliar), corregir vendor, fecha y monto, marcar <b>«Es un complemento»</b>, usar <b>«Leer con OCR»</b> en los escaneos, <b>«Aplicar cambios en Drive»</b> (renombra en su lugar), <b>«Pasar a Por conciliar»</b> (los mueve y los renombra con los datos de la fila) y mandar duplicados a <b>«_Duplicados»</b>. Si viste «Por conciliar», el mismo botón dice <b>«Devolver a Por identificar»</b>. Con el acceso limitado de Drive la herramienta no ve lo subido a mano: usa «Acceso completo a Drive» (viene activado).</p>
 <h3>Dos soportes del mismo documento (complementos)</h3>
 <p>Si un vendor tiene un segundo soporte del mismo gasto (por ejemplo factura y comprobante, o páginas por separado), la herramienta avisa «posible duplicado». Si <b>no</b> es duplicado, marca la casilla <b>«Es un complemento (guardar ambos)»</b> en esa fila: se selecciona y se guarda con el sufijo <code>_C2</code> (<code>_C3</code>…) junto al principal. En la conciliación el complemento viaja con el principal: se concilia con la misma partida de QBO, se mueve junto con él a «Conciliados» y aparece en el reporte (columna «Complementos»). Un archivo idéntico (mismos bytes) nunca se acepta como complemento. Un segundo archivo con sufijo <code>_2</code> (sin C) se considera posible duplicado y queda en «Soportes sin transacción» para tu revisión. Si el complemento tiene otro monto o fecha que el principal, no uses la casilla: se guarda como un soporte normal y se concilia con su propia partida.</p>
 <h3>Estatus de lo guardado en Drive</h3>
-<p>En la pestaña <b>3. Conciliar con QBO</b>, la línea «soportes en En proceso / ya conciliados» muestra cuántos hay en cada carpeta. Al cargar el Excel de QBO, elegir el periodo y pulsar «Conciliar», cada soporte guardado queda como: <b>Conciliado</b> (vendor y monto exactos, fecha dentro de la tolerancia), <b>Por revisar</b> (monto, fecha o vendor diferente), o <b>Soporte sin transacción</b> (no hay partida en el Excel). Las partidas de QBO sin soporte salen como <b>Pendientes de recibir</b>. El botón «Descargar reporte Excel» deja la evidencia en un libro con formato profesional (resumen con control, una hoja por estatus, totales, filtros y listo para imprimir; la primera vez descarga el generador de Excel y, si no puede, entrega una versión básica), y cada movimiento queda en <code>_Control/Reportes</code> y en el registro.</p>
+<p>En la pestaña <b>3. Conciliar con QBO</b>, la línea «soportes en Por conciliar / ya conciliados» muestra cuántos hay en cada carpeta (y puedes desplegar la lista y abrir cada archivo). Al cargar el Excel de QBO, elegir el periodo y pulsar «Conciliar», cada soporte guardado queda como: <b>Conciliado</b> (vendor y monto exactos, fecha dentro de la tolerancia), <b>Por revisar</b> (monto, fecha o vendor diferente), o <b>Soporte sin transacción</b> (no hay partida en el Excel). Las partidas de QBO sin soporte salen como <b>Pendientes de recibir</b>. El botón «Descargar reporte Excel» deja la evidencia en un libro con formato profesional (resumen con control, una hoja por estatus, totales, filtros y listo para imprimir; la primera vez descarga el generador de Excel y, si no puede, entrega una versión básica), y cada movimiento queda en <code>_Control/Reportes</code> y en el registro.</p>
 <h3>PDF escaneados y fotos (OCR)</h3>
 <p>El botón <b>«Leer con OCR (n)»</b> (Procesar) lee con reconocimiento de texto los PDF que son imagen y las fotos. La primera vez descarga el lector (~10 MB) y tarda unos segundos por documento; todo ocurre en tu navegador. El resultado <b>siempre queda sin seleccionar y con certeza baja</b>: verifica vendor, fecha y monto contra la vista previa. Funciona bien con capturas y escaneos nítidos; las fotos de celular torcidas, oscuras o con arrugas suelen leerse mal y se capturan a mano. Si cargaste el Excel de QBO y vendor y monto coinciden exactamente con una partida, la herramienta lo confirma y lo marca.</p>
 <h3>Buscar adjuntos en Gmail</h3>
