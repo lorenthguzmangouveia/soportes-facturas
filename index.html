@@ -158,12 +158,13 @@ small.mute{color:var(--mute)}
   <div class="card">
     <h2>Pendientes por conciliar en Drive</h2>
     <div class="row" style="margin-bottom:8px"><button class="btn" id="pdLoad">Consultar Drive</button><button class="btn sec" id="pdOcr" disabled title="Lee con OCR los archivos sin texto">Leer con OCR (0)</button><span class="src" id="pdStatus"></span></div>
-    <div id="pdInfo" class="src">Trae los archivos que están en «En proceso» (no conciliados). Aquí puedes corregir vendor, fecha y monto, marcar complementos, ver la vista previa y mandar duplicados a «_Duplicados», sin subir nada.</div>
+    <div id="pdInfo" class="src">Trae los archivos que están en «En proceso» (no conciliados). Aquí puedes corregir vendor, fecha y monto, marcar complementos, ver la vista previa mandar duplicados a «_Duplicados» y, si ya concilias, mover a la carpeta del mes lo que tildes, sin subir nada.</div>
   </div>
   <div class="grid2">
     <div class="card" style="padding:0">
       <div class="row" style="padding:12px 14px">
         <button class="btn" id="pdApply" disabled>Aplicar cambios en Drive (0)</button>
+        <button class="btn" id="pdMove" disabled title="Mueve los archivos tildados a «Conciliados MM-AAAA» (mes de la fecha de QBO). Requiere haber conciliado en la pestaña 2.">Conciliar y mover al mes (0)</button>
         <button class="btn sec" id="pdDup" disabled>Mover a «_Duplicados» (0)</button>
         <button class="btn sec" id="pdSelAll">Seleccionar los visibles</button>
         <button class="btn sec" id="pdSelNone">Quitar selección</button>
@@ -884,7 +885,7 @@ function pendRender() { const tb = $('#pdBody'); const vis = pendVisible();
 function pendValidate(tr) { const it = pendFind(tr.dataset.id); if (!it) return; tr.querySelector('[data-f=vendor]').classList.toggle('invalid', !itemVendor(it)); tr.querySelector('[data-f=date]').classList.toggle('invalid', !itemIso(it)); const c = itemCents(it); tr.querySelector('[data-f=amt]').classList.toggle('invalid', !(c != null && c > 0)); }
 function pendCounters() { const sel = S.pend.filter(i => i.selected), ap = sel.filter(i => itemValid(i) && pendDirty(i)), nd = S.pend.filter(i => i.status === 'duplicado' || pendDup(i)).length, ns = S.pend.filter(i => !i.stdName && !i.renamed).length, no = S.pend.filter(i => i.needsOcr).length;
   $('#pdCounters').textContent = `${S.pend.length} en «En proceso» · ${sel.length} seleccionados · ${S.pend.filter(i => itemValid(i) && pendDirty(i)).length} con cambios por aplicar` + (nd ? ` · ⚠ ${nd} posible(s) duplicado(s)` : '') + (ns ? ` · ${ns} con nombre no estándar` : '');
-  const a = $('#pdApply'); a.textContent = `Aplicar cambios en Drive (${ap.length})`; a.disabled = !ap.length; const d = $('#pdDup'); d.textContent = `Mover a «_Duplicados» (${sel.length})`; d.disabled = !sel.length;
+  const a = $('#pdApply'); a.textContent = `Aplicar cambios en Drive (${ap.length})`; a.disabled = !ap.length; const d = $('#pdDup'); d.textContent = `Mover a «_Duplicados» (${sel.length})`; d.disabled = !sel.length; const mv = $('#pdMove'), nm = sel.filter(i => { const r = pendRecon(i); return r && r.p; }).length; mv.textContent = `Conciliar y mover al mes (${nm})`; mv.disabled = !nm;
   const o = $('#pdOcr'); if (!OCRBUSY) { o.textContent = `Leer con OCR (${no})`; o.disabled = !no; } }
 async function pendLoad() { if (!S.root) { log('Conecta primero con Google Drive.', 'w'); $('#pdStatus').textContent = 'Conecta primero con Google Drive (arriba a la derecha).'; return; }
   if (S.pend.some(i => itemValid(i) && pendDirty(i)) && !confirm('Hay cambios sin aplicar en esta lista. Si consultas de nuevo se pierden. ¿Continuar?')) return;
@@ -921,7 +922,20 @@ async function pendToDup() { const list = S.pend.filter(i => i.selected); if (!l
       catch (e) { log(`No se pudo mover «${it.driveName}»: ${e.message}` + (e.status === 404 ? ' (ya no está en En proceso: ¿otra sesión lo movió?)' : ''), 'e'); } }
     log(`Resultado: ${ok} de ${list.length} archivo(s) movidos a «_Duplicados».`, ok === list.length ? 'o' : 'w'); await pendRefreshAfter(); }
   catch (e) { log('Error al mover a _Duplicados: ' + e.message, 'e'); pendRender(); } }
-$('#pdLoad').onclick = pendLoad; $('#pdApply').onclick = pendApply; $('#pdDup').onclick = pendToDup;
+async function pendMove() { const sel = S.pend.filter(i => i.selected); if (!sel.length) return; const st = $('#pdStatus'), stop = m => { st.textContent = m; log(m, 'w'); };
+  if (!S.result || !S.qbo) return stop('Primero carga el Excel de QBO en «2. Conciliar con QBO» y pulsa «Conciliar»; luego vuelve aquí a mover.');
+  const dirty = sel.filter(i => itemValid(i) && pendDirty(i)); if (dirty.length) return stop(`Aplica primero los cambios en Drive de ${dirty.length} archivo(s) seleccionado(s) («Aplicar cambios en Drive») y vuelve a concilar si hace falta.`);
+  const pairs = new Map(), skip = []; sel.forEach(i => { const r = pendRecon(i); if (r && r.p) pairs.set(r.p, r); else skip.push(i); });
+  if (!pairs.size) return stop('Ninguno de los archivos tildados tiene transacción en QBO en la última conciliación (están «Sin transacción» o fuera del periodo). Corrige vendor, fecha o monto, o cambia el periodo en la pestaña 2.');
+  const jobs = [], per = {}; pairs.forEach((r, p) => { const folder = `Conciliados ${p.t.iso.slice(5, 7)}-${p.t.iso.slice(0, 4)}`; if (!p.s.locked) { jobs.push({p, s: p.s, folder: null}); per[folder] = (per[folder] || 0) + 1; } (p.comps || []).forEach(c => { if (!c.locked) { jobs.push({p, s: c, folder}); per[folder] = (per[folder] || 0) + 1; } }); });
+  if (!jobs.length) return stop('Los archivos tildados ya estaban conciliados y movidos.');
+  const diffs = [...pairs.keys()].filter(p => p.status !== 'CONCILIADO').length;
+  const txt = `¿Mover ${jobs.length} archivo(s) a su carpeta del mes (según la fecha de QBO)?\n\n` + Object.entries(per).sort().map(([k, n]) => `  • ${k}: ${n}`).join('\n') + (diffs ? `\n\nATENCIÓN: ${diffs} de ellos tienen diferencias con QBO (monto, fecha o vendor). Al tildarlos tú los das por buenos y quedan registrados como conciliados manualmente.` : '') + (skip.length ? `\n\n${skip.length} archivo(s) tildado(s) sin transacción en QBO NO se moverán.` : '');
+  if (!confirm(txt)) return; skip.forEach(i => log(`No se movió «${i.driveName}»: sin transacción en QBO en la última conciliación.`, 'w'));
+  await moveMatched(jobs);
+  try { const live = new Set((await Drive.list(S.enProceso.id)).map(f => f.id)); S.pend = S.pend.filter(i => live.has(i.driveId)); } catch (e) { log('No pude refrescar la lista; pulsa «Consultar Drive».', 'w'); }
+  pendRender(); }
+$('#pdLoad').onclick = pendLoad; $('#pdMove').onclick = pendMove; $('#pdApply').onclick = pendApply; $('#pdDup').onclick = pendToDup;
 $('#pdOcr').onclick = () => runOcr(S.pend.filter(i => i.needsOcr), '#pdOcr', '#pdStatus', () => pendRender());
 $('#pdSelAll').onclick = () => { pendVisible().forEach(i => { i.selected = true; }); pendRender(); }; $('#pdSelNone').onclick = () => { S.pend.forEach(i => { i.selected = false; }); pendRender(); };
 $('#pdFilter').onchange = pendRender; $('#pdQ').oninput = pendRender;
@@ -1032,8 +1046,8 @@ async function copyPending() { const R = S.result.res; const g = {}; R.pend.forE
   const txt = 'Soportes pendientes de recibir:\n\n' + Object.entries(g).sort().map(([k, a]) => k + '\n' + a.map(t => `  - ${Core.fmtUS(t.iso)}  ${t.type}${t.num ? ' #' + t.num : ''}  USD ${Core.money(t._abs)}`).join('\n')).join('\n\n');
   try { await navigator.clipboard.writeText(txt); log('Lista de pendientes copiada al portapapeles.', 'o'); } catch (e) { log('No pude copiar al portapapeles: ' + e.message, 'e'); } }
 
-async function moveMatched() {
-  const R = S.result; const todo = movePlan(R); if (!todo.length) return; $('#btnMove').disabled = true; let ok = 0, fail = 0;
+async function moveMatched(todoIn) {
+  const R = S.result; const todo = todoIn || movePlan(R); if (!todo.length) return; $('#btnMove').disabled = true; let ok = 0, fail = 0;
   try { await Drive.session(); } catch (e) { log('No se pudo renovar la sesión de Google: ' + e.message, 'e'); $('#btnMove').disabled = false; return; }
   const dests = new Map();
   for (const j of todo) { const p = j.p, sup = j.s; try { const mo = p.t.iso.slice(5, 7), yr = p.t.iso.slice(0, 4); const folder = j.folder || `Conciliados ${mo}-${yr}`; let d = dests.get(folder);
@@ -1153,7 +1167,7 @@ $('#helpBody').innerHTML = `
 <h3>Evidencia que queda documentada</h3>
 <ul><li><code>_Control/registro_soportes.json</code>: cada soporte, su origen, si fue editado a mano y su partida de QBO.</li><li><code>_Control/Reportes/Conciliacion_*.xlsx</code>: reporte de cada movimiento. La bitácora de esta pantalla muestra cada acción.</li></ul>
 <h3>Pendientes en Drive: administrar lo que ya está guardado</h3>
-<p>La pestaña <b>3. Pendientes en Drive</b> trae, con el botón <b>«Consultar Drive»</b>, todos los archivos de «En proceso» (no conciliados), sin subir nada. Incluye los que se subieron a mano con cualquier nombre (se leen para proponer vendor, fecha y monto). Desde ahí puedes: ver la vista previa (clic para ampliar), corregir vendor, fecha y monto, marcar <b>«Es un complemento»</b>, usar <b>«Leer con OCR»</b> en los escaneos, y pulsar <b>«Aplicar cambios en Drive»</b>, que <b>renombra el archivo en su lugar</b> (no se copia). Los duplicados se mandan a la carpeta <b>«_Duplicados»</b> (nunca se borran) y dejan de participar en la conciliación. Si ya concilias en la pestaña 2, cada archivo muestra su estatus (Conciliado, Monto diferente, Sin transacción…) con la partida de QBO, y el botón <b>«Usar los datos de QBO»</b> corrige vendor, fecha y monto de un clic; al aplicar cambios la conciliación se recalcula sola. Con el acceso limitado de Drive la herramienta no ve lo subido a mano: usa «Acceso completo a Drive» (viene activado).</p>
+<p>La pestaña <b>3. Pendientes en Drive</b> trae, con el botón <b>«Consultar Drive»</b>, todos los archivos de «En proceso» (no conciliados), sin subir nada. Incluye los que se subieron a mano con cualquier nombre (se leen para proponer vendor, fecha y monto). Desde ahí puedes: ver la vista previa (clic para ampliar), corregir vendor, fecha y monto, marcar <b>«Es un complemento»</b>, usar <b>«Leer con OCR»</b> en los escaneos, y pulsar <b>«Aplicar cambios en Drive»</b>, que <b>renombra el archivo en su lugar</b> (no se copia). Los duplicados se mandan a la carpeta <b>«_Duplicados»</b> (nunca se borran) y dejan de participar en la conciliación. Si ya concilias en la pestaña 2, cada archivo muestra su estatus (Conciliado, Monto diferente, Sin transacción…) con la partida de QBO, y el botón <b>«Usar los datos de QBO»</b> corrige vendor, fecha y monto de un clic. Para <b>cerrar el ciclo desde esta pestaña</b>: carga el Excel y concilia en la pestaña 2, vuelve aquí, tilda los archivos y pulsa <b>«Conciliar y mover al mes»</b>: se mueven a «Conciliados MM-AAAA» (mes de la fecha de QBO) junto con sus complementos, quedan registrados con su partida de QBO y los «Sin transacción» no se mueven. Si tildas uno con diferencias (monto, fecha o vendor) la herramienta te lo advierte y lo registra como conciliado manualmente; al aplicar cambios la conciliación se recalcula sola. Con el acceso limitado de Drive la herramienta no ve lo subido a mano: usa «Acceso completo a Drive» (viene activado).</p>
 <h3>Dos soportes del mismo documento (complementos)</h3>
 <p>Si un vendor tiene un segundo soporte del mismo gasto (por ejemplo factura y comprobante, o páginas por separado), la herramienta avisa «posible duplicado». Si <b>no</b> es duplicado, marca la casilla <b>«Es un complemento (guardar ambos)»</b> en esa fila: se selecciona y se guarda con el sufijo <code>_C2</code> (<code>_C3</code>…) junto al principal. En la conciliación el complemento viaja con el principal: se concilia con la misma partida de QBO, se mueve junto con él a «Conciliados» y aparece en el reporte (columna «Complementos»). Un archivo idéntico (mismos bytes) nunca se acepta como complemento. Un segundo archivo con sufijo <code>_2</code> (sin C) se considera posible duplicado y queda en «Soportes sin transacción» para tu revisión. Si el complemento tiene otro monto o fecha que el principal, no uses la casilla: se guarda como un soporte normal y se concilia con su propia partida.</p>
 <h3>Estatus de lo guardado en Drive</h3>
