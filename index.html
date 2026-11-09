@@ -72,7 +72,9 @@ tr.st-guardado td{background:#f1faf4}tr.st-duplicado td,tr.st-error td{backgroun
 .kpi .n{font-size:22px;font-weight:700}.kpi .t{font-size:12px;color:var(--mute)}.kpi .m{font-size:12.5px;font-variant-numeric:tabular-nums}
 .kpi.ok{border-left:4px solid var(--ok)}.kpi.warn{border-left:4px solid #d9a000}.kpi.bad{border-left:4px solid var(--bad)}.kpi.info{border-left:4px solid var(--info)}
 .alert{padding:9px 12px;border-radius:8px;margin:8px 0;font-size:13px}
-.alert.err{background:var(--badbg);color:var(--bad)}.alert.warn{background:var(--warnbg);color:var(--warn)}.alert.ok{background:var(--okbg);color:var(--ok)}.alert.info{background:var(--infobg);color:var(--info)}
+.alert.err{background:var(--badbg);color:var(--bad)}.alert.warn{background:var(--warnbg);color:var(--warn)}.alert.ok{background:var(--okbg);color:var(--ok)}.guide{margin-top:12px}
+details.cols>summary{cursor:pointer;font-size:13px;color:var(--mute);margin:6px 0}
+.alert.info{background:var(--infobg);color:var(--info)}
 .sub-tabs{display:flex;gap:6px;flex-wrap:wrap;margin:12px 0 8px}
 .sub-tabs button{border:1px solid var(--line);background:#fff;border-radius:99px;padding:4px 12px;font-size:12.5px;cursor:pointer}
 .sub-tabs button.on{background:var(--brand);color:#fff;border-color:var(--brand)}
@@ -94,16 +96,16 @@ small.mute{color:var(--mute)}
   <div class="wrap hdr">
     <div>
       <h1>Soportes de facturas</h1>
-      <p class="sub">Procesar soportes, renombrar, guardar en Google Drive y conciliar contra QBO · Los documentos se leen en tu navegador y solo se guardan en tu Drive</p>
+      <p class="sub">Subir soportes, renombrar, guardar en Google Drive y conciliar contra QBO · Los documentos se leen en tu navegador y solo se guardan en tu Drive</p>
     </div>
     <div class="folderbox" id="folderBox"></div>
   </div>
   <div class="wrap"><nav class="tabs" id="tabs">
-    <button data-tab="proc" class="on">1. Procesar soportes</button>
-    <button data-tab="conc">2. Conciliar con QBO</button>
-    <button data-tab="pend">3. Pendientes en Drive</button>
+    <button data-tab="proc" class="on">1. Subir soportes</button>
+    <button data-tab="pend">2. Revisar en Drive</button>
+    <button data-tab="conc">3. Conciliar con QBO</button>
     <button data-tab="vend">Vendors</button>
-    <button data-tab="help">Instrucciones y autoprueba</button>
+    <button data-tab="help">Ayuda</button>
   </nav></div>
 </header>
 <div class="wrap"><details class="card" id="gset" style="margin-top:12px"><summary><b>Conexión con Google</b> <small class="mute">(configuración una sola vez y diagnóstico)</small></summary>
@@ -120,11 +122,11 @@ small.mute{color:var(--mute)}
 
 <!-- ============ TAB 1 ============ -->
 <section id="tab-proc">
+  <div class="alert info guide"><b>Paso 1 · Subir soportes.</b> Arrastra los PDF o fotos (o búscalos en Gmail), revisa vendor, fecha y monto, y pulsa <b>«Guardar»</b>. Quedan en Drive, en «En proceso». <b>Siguiente:</b> paso 2 para corregir lo guardado, o paso 3 para conciliar.</div>
   <div class="card">
     <h2>Cargar soportes</h2>
-    <div class="row" style="margin-bottom:10px"><button class="btn sec" id="btnOcr" disabled title="Lee con OCR los PDF escaneados y las fotos de la lista">Leer con OCR (0)</button><button class="btn sec" id="btnGmail">Buscar adjuntos en Gmail</button><span class="src">Gmail: solo lectura; no marca, mueve ni borra correos.</span></div>
+    <div class="row" style="margin-bottom:10px"><button class="btn sec" id="btnGmail" title="Solo lectura: no marca, mueve ni borra correos">Buscar adjuntos en Gmail</button><label class="btn sec">Cargar Excel de QBO (opcional)<input type="file" id="xlsIn2" accept=".xlsx,.xls,.csv" hidden></label><button class="btn sec" id="btnOcr" disabled style="display:none" title="Lee con OCR los PDF escaneados y las fotos de la lista">Leer con OCR (0)</button><span id="xlsName2" class="src">El Excel es opcional: sirve para nombrar cada soporte con la <b>fecha del sistema</b> de QBO.</span></div>
     <div id="gmPanel" class="card" style="display:none;margin-bottom:10px"></div>
-    <div class="row" style="margin-bottom:10px"><label class="btn sec">Cargar Excel de QBO (opcional)<input type="file" id="xlsIn2" accept=".xlsx,.xls,.csv" hidden></label><span id="xlsName2" class="src">Con el Excel de QBO la herramienta toma la <b>fecha del sistema</b> (la del registro del costo o gasto) para nombrar cada soporte.</span></div>
     <div class="drop" id="drop">
       <b>Arrastra aquí</b> PDF, imágenes o correos <b>.eml</b> (Gmail → ⋮ → «Descargar mensaje») — o <u>haz clic para elegirlos</u>
       <input type="file" id="fileIn" multiple accept=".pdf,.png,.jpg,.jpeg,.webp,.gif,.eml" hidden>
@@ -135,8 +137,8 @@ small.mute{color:var(--mute)}
     <div class="card" style="padding:0">
       <div class="row" style="padding:12px 14px">
         <button class="btn" id="btnSave" disabled>Guardar seleccionados en «En proceso»</button>
-        <button class="btn sec" id="btnSelOk">Seleccionar los válidos de certeza alta</button>
-        <button class="btn sec" id="btnClean">Quitar guardados de la lista</button>
+        <button class="btn sec" id="btnSelOk">Seleccionar válidos</button>
+        <button class="btn sec" id="btnClean">Limpiar guardados</button>
         <span class="src" id="counters"></span>
       </div>
       <div class="tblwrap" style="border:0;border-top:1px solid var(--line);border-radius:0">
@@ -155,26 +157,29 @@ small.mute{color:var(--mute)}
 
 <!-- ============ TAB 3 · PENDIENTES EN DRIVE ============ -->
 <section id="tab-pend" hidden>
+  <div class="alert info guide"><b>Paso 2 · Revisar en Drive.</b> Pulsa <b>«Consultar Drive»</b> para ver lo que ya está en «En proceso» (sin subir nada). Corrige vendor, fecha y monto, marca complementos o manda duplicados a «_Duplicados». <b>Siguiente:</b> paso 3 para conciliar con QBO.</div>
   <div class="card">
-    <h2>Pendientes por conciliar en Drive</h2>
-    <div class="row" style="margin-bottom:8px"><button class="btn" id="pdLoad">Consultar Drive</button><button class="btn sec" id="pdOcr" disabled title="Lee con OCR los archivos sin texto">Leer con OCR (0)</button><span class="src" id="pdStatus"></span></div>
+    <h2>Lo que está pendiente en Drive</h2>
+    <div class="row" style="margin-bottom:8px"><button class="btn" id="pdLoad">Consultar Drive</button><button class="btn sec" id="pdOcr" disabled style="display:none" title="Lee con OCR los archivos sin texto">Leer con OCR (0)</button><span class="src" id="pdStatus"></span></div>
     <div id="pdInfo" class="src">Trae los archivos que están en «En proceso» (no conciliados). Aquí puedes corregir vendor, fecha y monto, marcar complementos, ver la vista previa mandar duplicados a «_Duplicados» y, si ya concilias, mover a la carpeta del mes lo que tildes, sin subir nada.</div>
   </div>
   <div class="grid2">
     <div class="card" style="padding:0">
-      <div class="row" style="padding:12px 14px">
+      <div class="row" style="padding:12px 14px 4px"><b style="font-size:13px">Con lo que tildes:</b>
         <button class="btn" id="pdApply" disabled>Aplicar cambios en Drive (0)</button>
-        <button class="btn" id="pdMove" disabled title="Mueve los archivos tildados a «Conciliados MM-AAAA» (mes de la fecha de QBO). Requiere haber conciliado en la pestaña 2.">Conciliar y mover al mes (0)</button>
+        <button class="btn" id="pdMove" disabled title="Mueve los archivos tildados a «Conciliados MM-AAAA» (mes de la fecha de QBO). Requiere haber conciliado en el paso 3 (Conciliar con QBO).">Conciliar y mover al mes (0)</button>
         <button class="btn sec" id="pdDup" disabled>Mover a «_Duplicados» (0)</button>
-        <button class="btn sec" id="pdSelAll">Seleccionar los visibles</button>
-        <button class="btn sec" id="pdSelNone">Quitar selección</button>
-        <label>Mostrar <select id="pdFilter"><option value="all">Todos</option><option value="review">Por revisar / sin transacción</option><option value="nonstd">Nombre no estándar</option><option value="dirty">Con cambios sin aplicar</option><option value="dup">Posibles duplicados</option></select></label>
+      </div>
+      <div class="row" style="padding:4px 14px 12px">
+        <button class="btn sec" id="pdSelAll">Marcar todos los visibles</button>
+        <button class="btn sec" id="pdSelNone">Desmarcar</button>
+        <label>Mostrar <select id="pdFilter"><option value="all">Todos</option><option value="review">Con diferencias o sin transacción</option><option value="nonstd">Nombre no estándar</option><option value="dirty">Con cambios sin aplicar</option><option value="dup">Posibles duplicados</option></select></label>
         <input type="text" id="pdQ" placeholder="Buscar vendor o archivo" style="max-width:200px">
         <span class="src" id="pdCounters"></span>
       </div>
       <div class="tblwrap" style="border:0;border-top:1px solid var(--line);border-radius:0">
         <table id="pdTbl">
-          <thead><tr><th></th><th>Archivo en Drive</th><th>Vendor</th><th>Fecha (MM/DD/AAAA)</th><th class="num">Monto USD</th><th>Nombre final</th><th>Estatus</th></tr></thead>
+          <thead><tr><th></th><th>Archivo en Drive</th><th>Vendor</th><th>Fecha (MM/DD/AAAA)</th><th class="num">Monto USD</th><th>Nombre nuevo</th><th>Estatus</th></tr></thead>
           <tbody id="pdBody"><tr><td colspan="7" class="empty">Pulsa «Consultar Drive» para traer los archivos pendientes.</td></tr></tbody>
         </table>
       </div>
@@ -185,13 +190,14 @@ small.mute{color:var(--mute)}
 
 <!-- ============ TAB 2 ============ -->
 <section id="tab-conc" hidden>
+  <div class="alert info guide"><b>Paso 3 · Conciliar con QBO.</b> Carga el Excel de QBO, elige el mes y pulsa <b>«Conciliar»</b>. Revisa los resultados (puedes abrir cada archivo) y pulsa <b>«Mover»</b>: los conciliados pasan a «Conciliados MM-AAAA».</div>
   <div class="card">
-    <h2>Paso 1 · Soportes disponibles en el Drive</h2>
+    <h2>Soportes en Drive</h2>
     <div id="concSupports" class="src">Conecta la carpeta de resguardo para ver los soportes.</div>
     <div class="row" style="margin-top:8px"><button class="btn sec" id="btnRescan">Releer carpeta</button></div>
   </div>
   <div class="card">
-    <h2>Paso 2 · Excel de Bills y Expenses de QBO</h2>
+    <h2>Excel de QBO y periodo</h2>
     <div class="row">
       <label class="btn sec" for="xlsIn">Elegir Excel / CSV de QBO</label>
       <input type="file" id="xlsIn" accept=".xlsx,.xls,.csv" hidden>
@@ -711,7 +717,7 @@ function renderItems() { const tb = $('#itemsBody'); tb.innerHTML = S.items.leng
 function validateRowInputs(tr) { const it = S.items.find(x => x.id === +tr.dataset.id); if (!it || it.status !== 'pendiente') return;
   tr.querySelector('[data-f=vendor]').classList.toggle('invalid', !itemVendor(it)); tr.querySelector('[data-f=date]').classList.toggle('invalid', !itemIso(it)); const c = itemCents(it); tr.querySelector('[data-f=amt]').classList.toggle('invalid', !(c != null && c > 0)); }
 function updateCounters() { const pend = S.items.filter(i => i.status === 'pendiente'), sel = pend.filter(i => i.selected), ok = sel.filter(itemValid), saved = S.items.filter(i => i.status === 'guardado').length;
-  { const no = S.items.filter(i => i.status === 'pendiente' && i.needsOcr).length; const ob = $('#btnOcr'); if (ob && !OCRBUSY) { ob.textContent = 'Leer con OCR (' + no + ')'; ob.disabled = !no; } }
+  { const no = S.items.filter(i => i.status === 'pendiente' && i.needsOcr).length; const ob = $('#btnOcr'); if (ob && !OCRBUSY) { ob.textContent = 'Leer con OCR (' + no + ')'; ob.disabled = !no; ob.style.display = no ? '' : 'none'; } }
   const nd = S.items.filter(i => i.status === 'duplicado' || (i.status === 'pendiente' && dupHint(i))).length; $('#counters').textContent = `${S.items.length} en lista · ${sel.length} seleccionados (${ok.length} válidos) · ${saved} guardados` + (nd ? ` · ⚠ ${nd} posible(s) duplicado(s): revisión manual` : ''); $('#btnSave').disabled = !ok.length; $('#btnSave').textContent = S.root ? 'Guardar seleccionados en «En proceso»' : 'Conectar con Google para poder guardar'; $('#btnSave').title = S.root ? '' : 'Aún no estás conectado a Drive: este botón abre la conexión'; }
 $('#itemsBody').addEventListener('input', e => { const tr = e.target.closest('tr'); if (!tr || !e.target.dataset.f) return; const it = S.items.find(x => x.id === +tr.dataset.id); it.ed[e.target.dataset.f] = e.target.value; if (e.target.dataset.f === 'date') it.dateEdited = true; tr.querySelector('.final').innerHTML = finalName(it); tr.querySelector('.stt').innerHTML = statusHtml(it); validateRowInputs(tr); updateCounters(); });
 $('#itemsBody').addEventListener('change', e => { if (e.target.dataset && (e.target.dataset.f === 'vendor' || e.target.dataset.f === 'amt') && S.qbo) { applyQboDates(); renderItems(); return; } if (e.target.classList.contains('cmpchk')) { const it = S.items.find(x => x.id === +e.target.closest('tr').dataset.id); it.complement = e.target.checked; it.selected = it.complement && itemValid(it) && it.status === 'pendiente'; if (S.qbo) applyQboDates(); renderItems(); return; }
@@ -860,13 +866,13 @@ function pendReconHtml(it) { const r = pendRecon(it); if (!r) return ''; const m
   if (r.st === 'SIN_TXN') return `<div><span class="badge ${r.outside ? 'media' : 'baja'}">${r.outside ? 'En QBO, fuera del periodo' : 'Sin transacción en QBO'}</span></div><div class="note">${esc(r.why)}</div>`;
   const t = r.p.t; const q = `QBO: ${esc(t.type)}${t.num ? ' #' + esc(t.num) : ''} · ${esc(t.vendor)} · USD ${m(t._abs)} · ${Core.fmtUS(t.iso)}`;
   if (r.kind === 'comp') return `<div><span class="badge CONCILIADO">Complemento</span></div><div class="note">${q}</div>`;
-  if (r.st === 'CONCILIADO') return `<div><span class="badge CONCILIADO">Conciliado</span></div><div class="note">Falta moverlo a «Conciliados» (pestaña 2). ${q}</div>`;
+  if (r.st === 'CONCILIADO') return `<div><span class="badge CONCILIADO">Conciliado</span></div><div class="note">Falta moverlo a «Conciliados» (botón «Conciliar y mover al mes» o paso 3). ${q}</div>`;
   return `<div><span class="badge ${r.st}">${esc(LBL[r.st])}</span></div><div class="note">${q}</div><div class="note"><a href="#" data-act="useqbo">Usar los datos de QBO</a> (vendor, fecha y monto)</div>`; }
-function pendFinalHtml(it) { if (!itemValid(it)) return '<span class="src">— completa los campos —</span>'; const t = pendTarget(it); return lc(t) === lc(it.driveName) ? '<span class="src">sin cambios</span>' : esc(t); }
+function pendFinalHtml(it) { if (!itemValid(it)) return '<span class="src">— completa los campos —</span>'; const t = pendTarget(it); return lc(t) === lc(it.driveName) ? '<span class="src">—</span>' : esc(t); }
 function pendStatusHtml(it) { let h = pendReconHtml(it); const dh = pendDup(it);
   if (it.status === 'duplicado') h += `<div class="note">⚠ Archivo idéntico a otro ya guardado: ${esc(it.reason)}. Si es duplicado, mándalo a «_Duplicados».</div>`;
   if (!it.stdName && !it.renamed) h += '<div class="note">Nombre no estándar: se renombrará con los datos de la fila.</div>';
-  h += itemValid(it) ? (pendDirty(it) ? '<div><span class="badge media">Cambio por aplicar</span></div>' : '<div><span class="badge YA">Sin cambios</span></div>') : '<div><span class="badge media">Falta dato</span></div>';
+  h += itemValid(it) ? (pendDirty(it) ? '<div><span class="badge media">Cambio por aplicar</span></div>' : '<div class="src">Sin cambios</div>') : '<div><span class="badge media">Falta dato</span></div>';
   if (it.complement) h += '<div class="note" style="color:var(--info)">Complemento: se nombra con sufijo _C y se concilia con la misma partida que su principal</div>';
   else if (dh) h += `<div class="note">⚠ ${esc(dh)}: ¿duplicado? Si es otro documento del mismo gasto, marca «Es un complemento»; si sobra, mándalo a «_Duplicados».</div>`;
   if (dh || it.complement) h += `<label class="note"><input type="checkbox" class="cmpchk" ${it.complement ? 'checked' : ''}> Es un complemento</label>`; return h; }
@@ -883,12 +889,12 @@ function pendVisible() { const f = $('#pdFilter').value, q = lc($('#pdQ').value.
 function pendRender() { const tb = $('#pdBody'); const vis = pendVisible();
   tb.innerHTML = vis.length ? vis.map(pendRowHtml).join('') : `<tr><td colspan="7" class="empty">${S.pend.length ? 'Ningún archivo con este filtro.' : 'No hay archivos pendientes en «En proceso».'}</td></tr>`;
   $$('#pdBody tr[data-id]').forEach(pendValidate);
-  $('#pdInfo').innerHTML = S.result ? `Estatus según la última conciliación (${S.result.ran.toLocaleTimeString('en-US')}). Si cargas otro Excel o cambias el periodo en «2. Conciliar», vuelve a conciliar para actualizar.` : 'Para ver el estatus de conciliación de cada archivo, carga el Excel de QBO en «2. Conciliar con QBO» y pulsa «Conciliar»; luego vuelve aquí.'; pendCounters(); }
+  $('#pdInfo').innerHTML = S.result ? `Estatus según la última conciliación (${S.result.ran.toLocaleTimeString('en-US')}). Si cargas otro Excel o cambias el periodo en «3. Conciliar», vuelve a conciliar para actualizar.` : 'Para ver el estatus de conciliación de cada archivo, carga el Excel de QBO en «3. Conciliar con QBO» y pulsa «Conciliar»; luego vuelve aquí.'; pendCounters(); }
 function pendValidate(tr) { const it = pendFind(tr.dataset.id); if (!it) return; tr.querySelector('[data-f=vendor]').classList.toggle('invalid', !itemVendor(it)); tr.querySelector('[data-f=date]').classList.toggle('invalid', !itemIso(it)); const c = itemCents(it); tr.querySelector('[data-f=amt]').classList.toggle('invalid', !(c != null && c > 0)); }
 function pendCounters() { const sel = S.pend.filter(i => i.selected), ap = sel.filter(i => itemValid(i) && pendDirty(i)), nd = S.pend.filter(i => i.status === 'duplicado' || pendDup(i)).length, ns = S.pend.filter(i => !i.stdName && !i.renamed).length, no = S.pend.filter(i => i.needsOcr).length;
   $('#pdCounters').textContent = `${S.pend.length} en «En proceso» · ${sel.length} seleccionados · ${S.pend.filter(i => itemValid(i) && pendDirty(i)).length} con cambios por aplicar` + (nd ? ` · ⚠ ${nd} posible(s) duplicado(s)` : '') + (ns ? ` · ${ns} con nombre no estándar` : '');
   const a = $('#pdApply'); a.textContent = `Aplicar cambios en Drive (${ap.length})`; a.disabled = !ap.length; const d = $('#pdDup'); d.textContent = `Mover a «_Duplicados» (${sel.length})`; d.disabled = !sel.length; const mv = $('#pdMove'), nm = sel.filter(i => { const r = pendRecon(i); return r && r.p; }).length; mv.textContent = `Conciliar y mover al mes (${nm})`; mv.disabled = !nm;
-  const o = $('#pdOcr'); if (!OCRBUSY) { o.textContent = `Leer con OCR (${no})`; o.disabled = !no; } }
+  const o = $('#pdOcr'); if (!OCRBUSY) { o.textContent = `Leer con OCR (${no})`; o.disabled = !no; o.style.display = no ? '' : 'none'; } }
 async function pendLoad() { if (!S.root) { log('Conecta primero con Google Drive.', 'w'); $('#pdStatus').textContent = 'Conecta primero con Google Drive (arriba a la derecha).'; return; }
   if (S.pend.some(i => itemValid(i) && pendDirty(i)) && !confirm('Hay cambios sin aplicar en esta lista. Si consultas de nuevo se pierden. ¿Continuar?')) return;
   const btn = $('#pdLoad'), st = $('#pdStatus'); btn.disabled = true; st.textContent = 'Consultando Drive…';
@@ -925,10 +931,10 @@ async function pendToDup() { const list = S.pend.filter(i => i.selected); if (!l
     log(`Resultado: ${ok} de ${list.length} archivo(s) movidos a «_Duplicados».`, ok === list.length ? 'o' : 'w'); await pendRefreshAfter(); }
   catch (e) { log('Error al mover a _Duplicados: ' + e.message, 'e'); pendRender(); } }
 async function pendMove() { const sel = S.pend.filter(i => i.selected); if (!sel.length) return; const st = $('#pdStatus'), stop = m => { st.textContent = m; log(m, 'w'); };
-  if (!S.result || !S.qbo) return stop('Primero carga el Excel de QBO en «2. Conciliar con QBO» y pulsa «Conciliar»; luego vuelve aquí a mover.');
+  if (!S.result || !S.qbo) return stop('Primero carga el Excel de QBO en «3. Conciliar con QBO» y pulsa «Conciliar»; luego vuelve aquí a mover.');
   const dirty = sel.filter(i => itemValid(i) && pendDirty(i)); if (dirty.length) return stop(`Aplica primero los cambios en Drive de ${dirty.length} archivo(s) seleccionado(s) («Aplicar cambios en Drive») y vuelve a concilar si hace falta.`);
   const pairs = new Map(), skip = []; sel.forEach(i => { const r = pendRecon(i); if (r && r.p) pairs.set(r.p, r); else skip.push(i); });
-  if (!pairs.size) return stop('Ninguno de los archivos tildados tiene transacción en QBO en la última conciliación (están «Sin transacción» o fuera del periodo). Corrige vendor, fecha o monto, o cambia el periodo en la pestaña 2.');
+  if (!pairs.size) return stop('Ninguno de los archivos tildados tiene transacción en QBO en la última conciliación (están «Sin transacción» o fuera del periodo). Corrige vendor, fecha o monto, o cambia el periodo en el paso 3.');
   const jobs = [], per = {}; pairs.forEach((r, p) => { const folder = `Conciliados ${p.t.iso.slice(5, 7)}-${p.t.iso.slice(0, 4)}`; if (!p.s.locked) { jobs.push({p, s: p.s, folder: null}); per[folder] = (per[folder] || 0) + 1; } (p.comps || []).forEach(c => { if (!c.locked) { jobs.push({p, s: c, folder}); per[folder] = (per[folder] || 0) + 1; } }); });
   if (!jobs.length) return stop('Los archivos tildados ya estaban conciliados y movidos.');
   const diffs = [...pairs.keys()].filter(p => p.status !== 'CONCILIADO' && p.status !== 'OTRO_MES').length, otro = [...pairs.keys()].filter(p => p.status === 'OTRO_MES').length;
@@ -986,7 +992,7 @@ function parseQbo() { const q = S.qbo; q.err = null; const miss = ['date', 'vend
   const seen = new Map(); let dups = 0; r.txns.forEach(t => { if (!t.num) return; const k = [t.iso, t.typeNorm, t.num, t.vendor, t.cents].join('|'); if (seen.has(k)) dups++; else seen.set(k, 1); }); q.dupRows = dups;
   const g = new Map(); r.txns.forEach(t => { if (!t.num) return; const k = [t.iso, t.typeNorm, t.num, t.vendor].join('|'); g.set(k, (g.get(k) || 0) + 1); }); q.multiLine = [...g.values()].filter(n => n > 1).length; }
 function renderQbo() { const q = S.qbo; const hdr = q.rows[q.hdrRow] || []; const F = [['date', 'Fecha *'], ['type', 'Tipo de transacción'], ['num', 'Número'], ['vendor', 'Vendor / Name *'], ['amount', 'Monto *'], ['memo', 'Memo']];
-  let h = `<div class="alert ${q.complete && !q.err ? 'ok' : 'warn'}">Hoja «${esc(q.sheet)}», encabezados en la fila ${q.hdrRow + 1}. Verifica que las columnas detectadas sean las correctas (* obligatorias).</div><div class="map">` + F.map(([k, lbl]) => `<div><label>${lbl}</label><select data-map="${k}"><option value="">— no usar —</option>${hdr.map((c, i) => `<option value="${i}" ${q.map[k] === i ? 'selected' : ''}>${esc(String(c ?? '(vacío)'))} (col ${i + 1})</option>`).join('')}</select></div>`).join('') + '</div>';
+  let h = `<div class="alert ${q.complete && !q.err ? 'ok' : 'warn'}">Hoja «${esc(q.sheet)}», encabezados en la fila ${q.hdrRow + 1}. ${q.complete && !q.err ? 'Revisa que las columnas sean correctas solo si algo no cuadra.' : 'Faltan columnas obligatorias (*): elígelas abajo.'}</div><details class="cols" ${q.mapOpen || !q.complete || q.err ? 'open' : ''}><summary>Columnas detectadas del Excel (ver o cambiar)</summary><div class="map">` + F.map(([k, lbl]) => `<div><label>${lbl}</label><select data-map="${k}"><option value="">— no usar —</option>${hdr.map((c, i) => `<option value="${i}" ${q.map[k] === i ? 'selected' : ''}>${esc(String(c ?? '(vacío)'))} (col ${i + 1})</option>`).join('')}</select></div>`).join('') + '</div></details>';
   if (q.err) { h += `<div class="alert err">${esc(q.err)}</div>`; $('#xlsPanel').innerHTML = h; return; }
   h += `<h3>Tipos de transacción a conciliar</h3><div class="types">` + Object.entries(q.types).sort().map(([k, v]) => `<label><input type="checkbox" data-type="${esc(k)}" ${q.include.has(k) ? 'checked' : ''}> ${esc(v.label)} (${v.n} · ${Core.money(v.c)})</label>`).join('') + `</div><small class="mute">Por defecto: Bill, Expense, Check y Credit Card Expense. Los pagos (Bill Payment, Credit Card Payment) no llevan factura y quedan excluidos.</small>`;
   if (q.ignored) h += `<div class="alert info">${q.ignored} fila(s) sin fecha o monto válidos (títulos, subtotales, totales) se ignoraron.</div>`;
@@ -996,10 +1002,10 @@ function renderQbo() { const q = S.qbo; const hdr = q.rows[q.hdrRow] || []; cons
   if (dts.length) { const span = Core.dayNum(dts[dts.length - 1]) - Core.dayNum(dts[0]);
     h += `<h3>Periodo a conciliar</h3><div class="row"><label>Desde <input type="text" id="perFrom" class="dt" placeholder="MM/DD/AAAA" value="${S.period.from ? Core.fmtUS(S.period.from) : ''}"></label><label>Hasta <input type="text" id="perTo" class="dt" placeholder="MM/DD/AAAA" value="${S.period.to ? Core.fmtUS(S.period.to) : ''}"></label><span class="src">Atajos:</span>${months.map(m => `<button class="lnk" data-per="${m}">${m.slice(5)}/${m.slice(0, 4)}</button>`).join(' ')}<button class="lnk" data-per="">Todo</button></div>`;
     h += span > 62 && !S.period.from && !S.period.to ? `<div class="alert warn">El Excel abarca ${Core.fmtUS(dts[0])} a ${Core.fmtUS(dts[dts.length - 1])}. Elige el periodo (por ejemplo un mes) antes de conciliar; si no, todo lo que no tenga soporte aparecerá como pendiente.</div>` : `<small class="mute">Solo se concilian las transacciones del periodo; los soportes se consideran con 60 días de margen.</small>`; }
-  h += `<div class="row" style="margin-top:10px"><label>Tolerancia de fecha (± días) <input type="text" id="tolIn" value="${S.tol}" style="width:60px"></label><label><input type="checkbox" id="consIn" ${S.consolidate ? 'checked' : ''}> Consolidar líneas con el mismo número</label><button class="btn" id="btnRun">Conciliar</button></div>`;
+  h += `<div class="row" style="margin-top:10px"><button class="btn" id="btnRun">Conciliar</button></div><details class="cols" style="margin-top:8px"><summary>Opciones avanzadas (tolerancia de fecha, consolidar líneas)</summary><div class="row" style="margin-top:8px"><label>Tolerancia de fecha (± días) <input type="text" id="tolIn" value="${S.tol}" style="width:60px"></label><label><input type="checkbox" id="consIn" ${S.consolidate ? 'checked' : ''}> Consolidar líneas con el mismo número</label></div></details>`;
   $('#xlsPanel').innerHTML = h; }
 $('#xlsPanel').addEventListener('change', e => { const q = S.qbo; if (!q) return;
-  if (e.target.dataset.map) { const v = e.target.value; q.map[e.target.dataset.map] = v === '' ? undefined : +v; if (v === '') delete q.map[e.target.dataset.map]; q.include = null; q.complete = ['date', 'vendor', 'amount'].every(f => q.map[f] != null); parseQbo(); renderQbo(); }
+  if (e.target.dataset.map) { q.mapOpen = true; const v = e.target.value; q.map[e.target.dataset.map] = v === '' ? undefined : +v; if (v === '') delete q.map[e.target.dataset.map]; q.include = null; q.complete = ['date', 'vendor', 'amount'].every(f => q.map[f] != null); parseQbo(); renderQbo(); }
   else if (e.target.dataset.type != null) { e.target.checked ? q.include.add(e.target.dataset.type) : q.include.delete(e.target.dataset.type); }
   else if (e.target.id === 'perFrom' || e.target.id === 'perTo') { const iso = Core.parseUSDate(e.target.value) || ''; if (e.target.value.trim() && !iso) { e.target.classList.add('invalid'); return; } e.target.classList.remove('invalid'); S.period[e.target.id === 'perFrom' ? 'from' : 'to'] = iso; renderQbo(); }
   else if (e.target.id === 'consIn') S.consolidate = e.target.checked; else if (e.target.id === 'tolIn') { const n = parseInt(e.target.value, 10); S.tol = Number.isFinite(n) && n >= 0 && n <= 30 ? n : 5; e.target.value = S.tol; } });
@@ -1025,7 +1031,7 @@ async function runReconcile() {
       const hit = out.filter(t => t.cents === x.s._abs && vk(t.vendor) === vk(x.s.vendor) && !used.has(Core.sigOf(t, S.vIndex))).sort((a, b) => dd(a) - dd(b))[0]; if (!hit) return;
       const near = dd(hit) <= 45, folder = `Conciliados ${hit.iso.slice(5, 7)}-${hit.iso.slice(0, 4)}`; x.outside = hit; used.add(Core.sigOf(hit, S.vIndex));
       const desc = `${hit.type}${hit.num ? ' #' + hit.num : ''} · ${hit.vendor} · USD ${Core.money(hit.cents)} · ${Core.fmtUS(hit.iso)}`;
-      if (near) { x.why = `Corresponde a otro mes: SÍ existe en el Excel fuera del periodo elegido → ${desc}. Sugerido: conciliar y mover a «${folder}» (pestaña 3: tilda y pulsa «Conciliar y mover al mes»).`; x.pair = {s: x.s, t: hit, status: 'OTRO_MES', why: x.why, comps: [], accept: false, dsd: Core.dayNum(x.s.iso) - Core.dayNum(hit.iso), dc: 0, folder}; }
+      if (near) { x.why = `Corresponde a otro mes: SÍ existe en el Excel fuera del periodo elegido → ${desc}. Sugerido: conciliar y mover a «${folder}» (paso 2 «Revisar en Drive»: tilda el archivo y pulsa «Conciliar y mover al mes»).`; x.pair = {s: x.s, t: hit, status: 'OTRO_MES', why: x.why, comps: [], accept: false, dsd: Core.dayNum(x.s.iso) - Core.dayNum(hit.iso), dc: 0, folder}; }
       else x.why = `Existe en el Excel fuera del periodo, pero con fecha lejana (${desc}). Verifica que sea el mismo documento antes de usarlo.`; }); }
   res.pairs.forEach(p => { p.accept = p.status === 'CONCILIADO' && !p.s.locked; }); S.result = {res, tx, sum: Core.summarize(res, tx), tol: S.tol, ran: new Date(), period: {...P0}}; S.view = 'CONCILIADO'; renderResult();
   log(`Conciliación: ${tx.length} transacciones vs ${supports.length} soportes → conciliadas ${S.result.sum.conc.n}, por revisar ${S.result.sum.rev.n}, pendientes ${S.result.sum.pend.n}, soportes sin transacción ${S.result.sum.sin.n}.`, S.result.sum.control ? 'o' : 'e'); }
@@ -1034,7 +1040,7 @@ const LBL = {CONCILIADO: 'Conciliado', FECHA_FUERA: 'Fecha fuera de tolerancia',
 function renderResult() { const R = S.result, s = R.sum, m = Core.money; const kp = (cls, n, t, c) => `<div class="kpi ${cls}"><div class="n">${n}</div><div class="t">${t}</div><div class="m">${c != null ? 'USD ' + m(c) : ''}</div></div>`;
   const toMove = movePlan(R).length, nOtro = R.res.sin.filter(x => x.pair).length;
   let h = `<div class="card"><h2>Resultado de la conciliación</h2><div class="cards">${kp('info', s.total.n, 'Transacciones QBO analizadas', s.total.c)}${kp('ok', s.conc.n, 'Conciliadas' + (s.conc.prev ? ` (${s.conc.prev} de corridas previas)` : '') + (s.comps ? ` · con ${s.comps} complemento(s)` : ''), s.conc.c)}${kp('warn', s.rev.n, 'Por revisar (coinciden parcialmente)', s.rev.c)}${kp('bad', s.pend.n, 'Pendientes de recibir', s.pend.c)}${kp('bad', s.sin.n, 'Soportes sin transacción en QBO', s.sin.c)}</div>
-  ${nOtro ? `<div class="alert warn"><b>${nOtro} soporte(s) corresponden a otro mes</b> según el Excel (están en QBO fuera del periodo elegido). Ve a «3. Pendientes en Drive», tilda los y pulsa «Conciliar y mover al mes»: se envían a la carpeta del mes de su fecha en QBO. Detalle en «Soportes sin transacción».</div>` : ''}
+  ${nOtro ? `<div class="alert warn"><b>${nOtro} soporte(s) corresponden a otro mes</b> según el Excel (están en QBO fuera del periodo elegido). Ve a «2. Revisar en Drive», tilda los y pulsa «Conciliar y mover al mes»: se envían a la carpeta del mes de su fecha en QBO. Detalle en «Soportes sin transacción».</div>` : ''}
   <div class="alert ${s.control ? 'ok' : 'err'}">Control de suma: QBO ${m(s.total.c)} = Conciliado ${m(s.conc.c)} + Por revisar ${m(s.rev.c)} + Pendiente ${m(s.pend.c)} → ${s.control ? 'CUADRA' : 'NO CUADRA (revisar lógica)'}</div>
   <div class="row"><button class="btn" id="btnMove" ${toMove ? '' : 'disabled'}>Mover ${toMove} soporte(s) a «Conciliados»</button><button class="btn sec" id="btnXls">Descargar reporte Excel</button><button class="btn sec" id="btnCopyPend">Copiar lista de pendientes</button><span class="src">Tolerancia de fecha: ±${R.tol} días · Solo se mueven los «Conciliado» y los «Por revisar» que marques con ✓.</span></div>
   <div class="sub-tabs">${[['CONCILIADO', 'Conciliados', s.conc.n], ['REVISAR', 'Por revisar', s.rev.n], ['PENDIENTE', 'Pendientes de recibir', s.pend.n], ['PEND_VENDOR', 'Pendientes por vendor', ''], ['SIN_TXN', 'Soportes sin transacción', s.sin.n]].map(([k, l, n]) => `<button data-view="${k}" class="${S.view === k ? 'on' : ''}">${l}${n !== '' ? ' (' + n + ')' : ''}</button>`).join('')}</div><div id="resTable"></div></div>`;
@@ -1150,6 +1156,7 @@ async function downloadReport() { try { const bytes = await buildReportBytes(); 
    AYUDA Y AUTOPRUEBA
    ===================================================================== */
 $('#helpBody').innerHTML = `
+<div class="alert info"><b>Resumen en 3 pasos.</b><br><b>1 · Subir soportes:</b> arrastra PDF o fotos (o busca en Gmail), revisa y guarda en «En proceso».<br><b>2 · Revisar en Drive:</b> consulta lo guardado, corrige nombre, vendor, fecha o monto, y manda duplicados a «_Duplicados».<br><b>3 · Conciliar con QBO:</b> carga el Excel, elige el mes, concilia y mueve a «Conciliados MM-AAAA».</div>
 <h2>Cómo se usa</h2>
 <h3>Preparación (una sola vez)</h3>
 <ol><li>Usa <b>Google Chrome o Microsoft Edge</b> y entra siempre con la <b>cuenta de resguardo</b> (la misma para quien cubra las vacaciones).</li>
@@ -1180,13 +1187,13 @@ $('#helpBody').innerHTML = `
 <h3>Evidencia que queda documentada</h3>
 <ul><li><code>_Control/registro_soportes.json</code>: cada soporte, su origen, si fue editado a mano y su partida de QBO.</li><li><code>_Control/Reportes/Conciliacion_*.xlsx</code>: reporte de cada movimiento. La bitácora de esta pantalla muestra cada acción.</li></ul>
 <h3>Ver el archivo desde los resultados</h3>
-<p>En la pestaña <b>2. Conciliar con QBO</b>, el nombre del archivo soporte (y el de sus complementos) es un enlace: al pulsarlo se abre la <b>vista previa ampliada</b> del documento (con zoom +/− y cierre con Esc) para compararlo con la partida de QBO sin salir de la pantalla.</p>
+<p>En la pestaña <b>3. Conciliar con QBO</b>, el nombre del archivo soporte (y el de sus complementos) es un enlace: al pulsarlo se abre la <b>vista previa ampliada</b> del documento (con zoom +/− y cierre con Esc) para compararlo con la partida de QBO sin salir de la pantalla.</p>
 <h3>Pendientes en Drive: administrar lo que ya está guardado</h3>
-<p>La pestaña <b>3. Pendientes en Drive</b> trae, con el botón <b>«Consultar Drive»</b>, todos los archivos de «En proceso» (no conciliados), sin subir nada. Incluye los que se subieron a mano con cualquier nombre (se leen para proponer vendor, fecha y monto). Desde ahí puedes: ver la vista previa (clic para ampliar), corregir vendor, fecha y monto, marcar <b>«Es un complemento»</b>, usar <b>«Leer con OCR»</b> en los escaneos, y pulsar <b>«Aplicar cambios en Drive»</b>, que <b>renombra el archivo en su lugar</b> (no se copia). Los duplicados se mandan a la carpeta <b>«_Duplicados»</b> (nunca se borran) y dejan de participar en la conciliación. Si ya concilias en la pestaña 2, cada archivo muestra su estatus (Conciliado, Monto diferente, Sin transacción…) con la partida de QBO, y el botón <b>«Usar los datos de QBO»</b> corrige vendor, fecha y monto de un clic. Para <b>cerrar el ciclo desde esta pestaña</b>: carga el Excel y concilia en la pestaña 2, vuelve aquí, tilda los archivos y pulsa <b>«Conciliar y mover al mes»</b>: se mueven a «Conciliados MM-AAAA» (mes de la fecha de QBO) junto con sus complementos, quedan registrados con su partida de QBO y los «Sin transacción» no se mueven. Si tildas uno con diferencias (monto, fecha o vendor) la herramienta te lo advierte y lo registra como conciliado manualmente; al aplicar cambios la conciliación se recalcula sola. Con el acceso limitado de Drive la herramienta no ve lo subido a mano: usa «Acceso completo a Drive» (viene activado).</p>
+<p>La pestaña <b>2. Revisar en Drive</b> trae, con el botón <b>«Consultar Drive»</b>, todos los archivos de «En proceso» (no conciliados), sin subir nada. Incluye los que se subieron a mano con cualquier nombre (se leen para proponer vendor, fecha y monto). Desde ahí puedes: ver la vista previa (clic para ampliar), corregir vendor, fecha y monto, marcar <b>«Es un complemento»</b>, usar <b>«Leer con OCR»</b> en los escaneos, y pulsar <b>«Aplicar cambios en Drive»</b>, que <b>renombra el archivo en su lugar</b> (no se copia). Los duplicados se mandan a la carpeta <b>«_Duplicados»</b> (nunca se borran) y dejan de participar en la conciliación. Si ya conciliaste en el paso 3, cada archivo muestra su estatus (Conciliado, Monto diferente, Sin transacción…) con la partida de QBO, y el botón <b>«Usar los datos de QBO»</b> corrige vendor, fecha y monto de un clic. Para <b>cerrar el ciclo desde esta pestaña</b>: carga el Excel y concilia en el paso 3, vuelve aquí, tilda los archivos y pulsa <b>«Conciliar y mover al mes»</b>: se mueven a «Conciliados MM-AAAA» (mes de la fecha de QBO) junto con sus complementos, quedan registrados con su partida de QBO y los «Sin transacción» no se mueven. Si tildas uno con diferencias (monto, fecha o vendor) la herramienta te lo advierte y lo registra como conciliado manualmente; al aplicar cambios la conciliación se recalcula sola. Con el acceso limitado de Drive la herramienta no ve lo subido a mano: usa «Acceso completo a Drive» (viene activado).</p>
 <h3>Dos soportes del mismo documento (complementos)</h3>
 <p>Si un vendor tiene un segundo soporte del mismo gasto (por ejemplo factura y comprobante, o páginas por separado), la herramienta avisa «posible duplicado». Si <b>no</b> es duplicado, marca la casilla <b>«Es un complemento (guardar ambos)»</b> en esa fila: se selecciona y se guarda con el sufijo <code>_C2</code> (<code>_C3</code>…) junto al principal. En la conciliación el complemento viaja con el principal: se concilia con la misma partida de QBO, se mueve junto con él a «Conciliados» y aparece en el reporte (columna «Complementos»). Un archivo idéntico (mismos bytes) nunca se acepta como complemento. Un segundo archivo con sufijo <code>_2</code> (sin C) se considera posible duplicado y queda en «Soportes sin transacción» para tu revisión. Si el complemento tiene otro monto o fecha que el principal, no uses la casilla: se guarda como un soporte normal y se concilia con su propia partida.</p>
 <h3>Estatus de lo guardado en Drive</h3>
-<p>En la pestaña <b>2. Conciliar con QBO</b>, la línea «soportes en En proceso / ya conciliados» muestra cuántos hay en cada carpeta. Al cargar el Excel de QBO, elegir el periodo y pulsar «Conciliar», cada soporte guardado queda como: <b>Conciliado</b> (vendor y monto exactos, fecha dentro de la tolerancia), <b>Por revisar</b> (monto, fecha o vendor diferente), o <b>Soporte sin transacción</b> (no hay partida en el Excel). Las partidas de QBO sin soporte salen como <b>Pendientes de recibir</b>. El botón «Descargar reporte Excel» deja la evidencia en un libro con formato profesional (resumen con control, una hoja por estatus, totales, filtros y listo para imprimir; la primera vez descarga el generador de Excel y, si no puede, entrega una versión básica), y cada movimiento queda en <code>_Control/Reportes</code> y en el registro.</p>
+<p>En la pestaña <b>3. Conciliar con QBO</b>, la línea «soportes en En proceso / ya conciliados» muestra cuántos hay en cada carpeta. Al cargar el Excel de QBO, elegir el periodo y pulsar «Conciliar», cada soporte guardado queda como: <b>Conciliado</b> (vendor y monto exactos, fecha dentro de la tolerancia), <b>Por revisar</b> (monto, fecha o vendor diferente), o <b>Soporte sin transacción</b> (no hay partida en el Excel). Las partidas de QBO sin soporte salen como <b>Pendientes de recibir</b>. El botón «Descargar reporte Excel» deja la evidencia en un libro con formato profesional (resumen con control, una hoja por estatus, totales, filtros y listo para imprimir; la primera vez descarga el generador de Excel y, si no puede, entrega una versión básica), y cada movimiento queda en <code>_Control/Reportes</code> y en el registro.</p>
 <h3>PDF escaneados y fotos (OCR)</h3>
 <p>El botón <b>«Leer con OCR (n)»</b> (Procesar) lee con reconocimiento de texto los PDF que son imagen y las fotos. La primera vez descarga el lector (~10 MB) y tarda unos segundos por documento; todo ocurre en tu navegador. El resultado <b>siempre queda sin seleccionar y con certeza baja</b>: verifica vendor, fecha y monto contra la vista previa. Funciona bien con capturas y escaneos nítidos; las fotos de celular torcidas, oscuras o con arrugas suelen leerse mal y se capturan a mano. Si cargaste el Excel de QBO y vendor y monto coinciden exactamente con una partida, la herramienta lo confirma y lo marca.</p>
 <h3>Buscar adjuntos en Gmail</h3>
